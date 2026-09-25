@@ -9,7 +9,10 @@ export async function callGeminiStream(options: ProviderRequestOptions): Promise
   }
 
   // Model normalization
-  let modelName = model || 'gemini-2.5-flash';
+  let modelName = model || 'gemini-3.8-flash';
+  if (modelName === 'gemini-2.5-flash') {
+    modelName = 'gemini-3.8-flash';
+  }
   if (modelName.startsWith('models/')) {
     modelName = modelName.replace('models/', '');
   }

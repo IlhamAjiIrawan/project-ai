@@ -482,7 +482,7 @@ export function CharacterModal() {
                     type="text"
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
-                    placeholder="Contoh: deepseek/deepseek-r1 atau gemini-2.5-flash"
+                    placeholder="Contoh: deepseek/deepseek-r1 atau gemini-3.8-flash"
                     className="w-full px-4 py-2.5 rounded-xl glass-input text-sm font-mono"
                   />
                 </div>

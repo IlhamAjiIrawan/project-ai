@@ -24,25 +24,31 @@ export interface ModelPresetItem {
 export const POPULAR_MODELS: ModelPresetItem[] = [
   // Gemini
   {
+    id: 'gemini-3.8-flash',
+    name: 'Gemini 3.8 Flash',
+    provider: 'gemini',
+    description: 'Model terbaru Google Gemini: super cepat, cerdas, dan ideal untuk roleplay real-time',
+    badge: 'Terbaru & Cepat',
+    recommended: true,
+  },
+  {
+    id: 'gemini-3.8-pro',
+    name: 'Gemini 3.8 Pro',
+    provider: 'gemini',
+    description: 'Kemampuan penalaran dan penulisan cerita novel interaktif paling mendalam',
+    badge: 'Deep Novel / RPG',
+  },
+  {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
-    description: 'Sangat cepat, cerdas, efisien & ideal untuk roleplay real-time',
-    badge: 'Cepat & Cerdas',
-    recommended: true,
+    description: 'Efisien dan responsif untuk percakapan',
   },
   {
     id: 'gemini-1.5-pro',
     name: 'Gemini 1.5 Pro',
     provider: 'gemini',
-    description: 'Kreativitas tinggi, pemahaman konteks sangat panjang & mendalam',
-    badge: 'Kreatif / Deep RPG',
-  },
-  {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    provider: 'gemini',
-    description: 'Model ringan dan responsif untuk percakapan santai',
+    description: 'Pemahaman konteks panjang dan memori mendalam',
   },
 
   // OpenRouter

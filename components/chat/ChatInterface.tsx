@@ -80,12 +80,12 @@ export function ChatInterface() {
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
         <Sparkles className="w-12 h-12 text-cyan-400 animate-bounce" />
         <h3 className="text-lg font-bold text-white">Pilih Karakter untuk Memulai Roleplay</h3>
-        <button
-          onClick={() => setActiveView('gallery')}
-          className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold text-xs cursor-pointer shadow-lg shadow-cyan-500/20"
+        <a
+          href="/"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-cyan-500/20"
         >
           Buka Galeri Karakter
-        </button>
+        </a>
       </div>
     );
   }

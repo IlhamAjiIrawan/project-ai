@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Character, ChatSession } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { MessageSquare, Edit3, Trash2, Download, Sparkles, Flame } from 'lucide-react';
+import { MessageSquare, Edit3, Trash2, Download, Sparkles } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
 
 interface CharacterCardProps {
@@ -23,10 +24,10 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
 };
 
 export function CharacterCard({ character }: CharacterCardProps) {
+  const router = useRouter();
   const {
     setSelectedCharacterId,
     setSelectedSessionId,
-    setActiveView,
     setEditingCharacter,
     setIsCharacterModalOpen,
     selectedPersonaId,
@@ -44,7 +45,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
     if (existingSession) {
       setSelectedCharacterId(character.id);
       setSelectedSessionId(existingSession.id);
-      setActiveView('chat');
+      router.push('/chat');
     } else {
       // Create new session
       const newSessionId = `session_${Date.now()}`;
@@ -72,7 +73,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
 
       setSelectedCharacterId(character.id);
       setSelectedSessionId(newSessionId);
-      setActiveView('chat');
+      router.push('/chat');
     }
   };
 
@@ -101,7 +102,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
   return (
     <div
       onClick={handleStartChat}
-      className="glass-card group relative flex flex-col rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-cyan-500/40 transition-all duration-300 shadow-lg hover:shadow-cyan-500/10"
+      className="glass-card group relative flex flex-col rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-cyan-500/40 transition-all duration-300 shadow-md hover:shadow-cyan-500/15"
     >
       {/* Top Banner Image with Gradient */}
       <div className="relative h-44 w-full overflow-hidden bg-zinc-900">
@@ -110,7 +111,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
           alt={character.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
 
         {/* Category Badge */}
         <div className="absolute top-3 left-3 flex items-center gap-1.5">
@@ -131,14 +132,14 @@ export function CharacterCard({ character }: CharacterCardProps) {
           <button
             onClick={handleExport}
             title="Ekspor Karakter (JSON)"
-            className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 backdrop-blur-md transition-colors"
+            className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleEdit}
             title="Edit Karakter"
-            className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 backdrop-blur-md transition-colors"
+            className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -146,7 +147,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
             <button
               onClick={handleDelete}
               title="Hapus Karakter"
-              className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-rose-500/20 text-zinc-300 hover:text-rose-400 border border-white/10 backdrop-blur-md transition-colors"
+              className="p-1.5 rounded-xl bg-zinc-900/80 hover:bg-rose-500/20 text-zinc-300 hover:text-rose-400 border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -157,10 +158,10 @@ export function CharacterCard({ character }: CharacterCardProps) {
       {/* Body Content */}
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
+          <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
             {character.name}
           </h3>
-          <p className="text-xs text-zinc-400 mt-1 line-clamp-2 font-light">
+          <p className="text-xs text-zinc-400 mt-1 line-clamp-2 font-light leading-relaxed">
             {character.tagline || character.description}
           </p>
 
@@ -181,7 +182,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
         <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-1 text-[11px] text-zinc-400">
             <Sparkles className="w-3 h-3 text-cyan-400" />
-            <span>Siap Berinteraksi</span>
+            <span>Siap Chat</span>
           </div>
 
           <span className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400 group-hover:translate-x-0.5 transition-transform">

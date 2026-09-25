@@ -273,10 +273,49 @@ export function SettingsModal() {
 
               {/* Custom / Ollama Endpoint */}
               <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3">
-                <label className="text-xs font-bold text-zinc-200 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
-                  Custom Endpoint / Ollama Local AI
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-200 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-400" />
+                    Custom Endpoint / Ollama Local AI
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          customBaseUrl: 'http://localhost:11434/v1',
+                          customApiKey: 'ollama',
+                          customModelName: form.customModelName || 'gemma2:27b',
+                        })
+                      }
+                      className="px-2 py-0.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[10px] cursor-pointer"
+                    >
+                      Set URL Ollama
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          customBaseUrl: 'http://localhost:1234/v1',
+                          customApiKey: 'lm-studio',
+                        })
+                      }
+                      className="px-2 py-0.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] cursor-pointer"
+                    >
+                      Set LM Studio
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 space-y-0.5">
+                  <p className="font-semibold">⚠️ Catatan Ollama:</p>
+                  <p className="text-zinc-300">
+                    Gunakan Base URL: <code className="text-amber-200">http://localhost:11434/v1</code> (jangan <code className="line-through text-rose-300">https://ollama.com</code>). Pastikan aplikasi Ollama aktif di PC.
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] text-zinc-400 mb-1">Base URL</label>
@@ -294,7 +333,7 @@ export function SettingsModal() {
                       type="text"
                       value={form.customModelName}
                       onChange={(e) => setForm({ ...form, customModelName: e.target.value })}
-                      placeholder="llama3:latest"
+                      placeholder="gemma2:27b, llama3.2, dll."
                       className="w-full px-3 py-2 rounded-xl glass-input text-xs font-mono"
                     />
                   </div>
@@ -327,7 +366,7 @@ export function SettingsModal() {
                     type="text"
                     value={form.defaultModel}
                     onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
-                    placeholder="gemini-2.5-flash"
+                    placeholder="gemini-3.8-flash"
                     className="w-full px-4 py-2.5 rounded-xl glass-input text-sm font-mono"
                   />
                 </div>

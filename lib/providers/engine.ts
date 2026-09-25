@@ -1,7 +1,4 @@
 import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType } from '@/types';
-import { callGeminiStream } from './gemini';
-import { callOpenRouterStream } from './openrouter';
-import { callOpenAICompatibleStream } from './openai';
 
 export interface GenerateRoleplayOptions {
   character: Character;
@@ -78,7 +75,10 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
 
   // Determine provider & model
   const provider: ProviderType = character.customProvider || settings.defaultProvider || 'gemini';
-  const model: string = character.customModel || settings.defaultModel || (provider === 'gemini' ? 'gemini-2.5-flash' : 'deepseek/deepseek-chat');
+  const model: string =
+    character.customModel ||
+    settings.defaultModel ||
+    (provider === 'gemini' ? 'gemini-3.8-flash' : 'deepseek/deepseek-chat');
 
   // Build recent context text for lorebook keyword matching
   const recentMessages = chatHistory.slice(-6);
@@ -105,30 +105,81 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const maxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
   const topP = settings.topP ?? 0.95;
 
-  const requestOptions = {
+  const payload = {
+    provider,
+    model,
     systemPrompt,
     messages: historyForLLM,
     temperature,
     maxTokens,
     topP,
     settings,
-    model,
-    onChunk,
-    signal,
   };
 
-  switch (provider) {
-    case 'gemini':
-      return await callGeminiStream(requestOptions);
-    case 'openrouter':
-      return await callOpenRouterStream(requestOptions);
-    case 'groq':
-      return await callOpenAICompatibleStream(requestOptions, 'groq');
-    case 'openai':
-      return await callOpenAICompatibleStream(requestOptions, 'openai');
-    case 'custom':
-      return await callOpenAICompatibleStream(requestOptions, 'custom');
-    default:
-      return await callGeminiStream(requestOptions);
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!response.ok) {
+    let errorMsg = '';
+    try {
+      const errJson = await response.json();
+      errorMsg = errJson.error || JSON.stringify(errJson);
+    } catch {
+      errorMsg = await response.text();
+    }
+    throw new Error(errorMsg || `HTTP Error ${response.status}`);
   }
+
+  if (!response.body) {
+    throw new Error('ReadableStream tidak didukung oleh respons server.');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data: ')) continue;
+      const dataStr = trimmed.substring(6);
+      if (dataStr === '[DONE]') continue;
+
+      try {
+        const parsed = JSON.parse(dataStr);
+        // Supports both OpenAI/OpenRouter delta format and Gemini candidate parts format
+        let chunkText = '';
+        if (parsed.choices && parsed.choices[0]?.delta?.content) {
+          chunkText = parsed.choices[0].delta.content;
+        } else if (parsed.candidates && parsed.candidates[0]?.content?.parts?.[0]?.text) {
+          chunkText = parsed.candidates[0].content.parts[0].text;
+        }
+
+        if (chunkText) {
+          fullText += chunkText;
+          if (onChunk) {
+            onChunk(chunkText);
+          }
+        }
+      } catch {
+        // Ignore JSON parse errors on partial chunks
+      }
+    }
+  }
+
+  return fullText;
 }

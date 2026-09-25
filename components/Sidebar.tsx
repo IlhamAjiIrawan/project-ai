@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
@@ -13,8 +15,10 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
   Flame,
+  MessageSquare,
+  Layers,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { ChatSession } from '@/types';
@@ -25,15 +29,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const {
-    activeView,
-    setActiveView,
     selectedCharacterId,
     setSelectedCharacterId,
     selectedSessionId,
     setSelectedSessionId,
-    setIsSettingsOpen,
-    setIsPersonaModalOpen,
     selectedPersonaId,
   } = useAppStore();
 
@@ -75,7 +77,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
     setSelectedCharacterId(targetCharId);
     setSelectedSessionId(newSessionId);
-    setActiveView('chat');
+    router.push('/chat');
   };
 
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
@@ -98,16 +100,24 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const handleSelectSession = (session: ChatSession) => {
     setSelectedSessionId(session.id);
     setSelectedCharacterId(session.characterId);
-    setActiveView('chat');
+    router.push('/chat');
   };
+
+  const navMenuItems = [
+    { href: '/', label: 'Dashboard', icon: Compass },
+    { href: '/chat', label: 'Ruang Chat', icon: MessageSquare },
+    { href: '/characters', label: 'Studio Karakter', icon: Sparkles },
+    { href: '/personas', label: 'Persona Pemain', icon: Users },
+    { href: '/settings', label: 'Pengaturan API', icon: SlidersHorizontal },
+  ];
 
   return (
     <aside
       className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col bg-zinc-950/95 md:bg-zinc-950/70 border-r border-white/10 backdrop-blur-xl transition-all duration-300 ${
-        isOpen ? 'w-72 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-16'
+        isOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-16'
       }`}
     >
-      {/* Top Action / New Chat */}
+      {/* Top Action / New Chat Button */}
       <div className="p-3 border-b border-white/10 flex items-center justify-between gap-2">
         {isOpen ? (
           <button
@@ -131,35 +141,43 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <button
           onClick={onToggle}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer hidden md:flex"
+          title={isOpen ? "Sembunyikan Sidebar" : "Buka Sidebar"}
         >
           {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Main List: Recent Chats & Characters */}
+      {/* Main Content: Navigation & Sessions */}
       <div className="flex-1 overflow-y-auto p-2 space-y-4">
-        {/* Gallery shortcut */}
+        {/* Primary Nav Menu for Mobile / Collapsed mode */}
         <div className="space-y-1">
-          <button
-            onClick={() => setActiveView('gallery')}
-            className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-              activeView === 'gallery'
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-            }`}
-            title="Galeri Karakter"
-          >
-            <Compass className="w-4 h-4 text-violet-400 shrink-0" />
-            {isOpen && <span>Semua Karakter ({characters.length})</span>}
-          </button>
+          {navMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={!isOpen ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-cyan-400' : 'text-zinc-400'}`} />
+                {isOpen && <span>{item.label}</span>}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Quick Characters List */}
-        {isOpen && (
+        {isOpen && characters.length > 0 && (
           <div>
             <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-              <span>Karakter Populer</span>
-              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>Karakter Cepat</span>
+              <Sparkles className="w-3 h-3 text-cyan-400" />
             </div>
             <div className="grid grid-cols-5 gap-1.5 py-1">
               {characters.slice(0, 5).map((char) => (
@@ -174,8 +192,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     alt={char.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1">
-                    <span className="text-[9px] text-white truncate font-medium">{char.name.split(' ')[0]}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-0.5">
+                    <span className="text-[8px] text-white truncate font-medium">{char.name.split(' ')[0]}</span>
                   </div>
                 </button>
               ))}
@@ -202,7 +220,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             ) : (
               sessions.map((session) => {
                 const char = characters.find((c) => c.id === session.characterId);
-                const isSelected = selectedSessionId === session.id && activeView === 'chat';
+                const isSelected = pathname === '/chat' && selectedSessionId === session.id;
 
                 return (
                   <div
@@ -254,13 +272,13 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Footer / Active Persona & Settings */}
+      {/* Footer / Active Persona Link */}
       <div className="p-3 border-t border-white/10 space-y-2">
         {isOpen ? (
-          <div
-            onClick={() => setIsPersonaModalOpen(true)}
-            className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition-all"
-            title="Edit Profil Persona"
+          <Link
+            href="/personas"
+            className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all cursor-pointer group"
+            title="Kelola Persona Pemain"
           >
             <img
               src={activePersona?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
@@ -268,18 +286,20 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               className="w-7 h-7 rounded-full object-cover ring-1 ring-cyan-400/40 shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-zinc-200 truncate">{activePersona?.name || 'User Persona'}</p>
-              <p className="text-[10px] text-cyan-400 truncate">Klik untuk ganti persona</p>
+              <p className="text-xs font-semibold text-zinc-200 truncate group-hover:text-cyan-300">
+                {activePersona?.name || 'User Persona'}
+              </p>
+              <p className="text-[10px] text-zinc-400 truncate">Klik untuk kelola profil</p>
             </div>
-          </div>
+          </Link>
         ) : (
-          <button
-            onClick={() => setIsPersonaModalOpen(true)}
+          <Link
+            href="/personas"
             title="Persona Pemain"
             className="w-10 h-10 mx-auto rounded-xl bg-white/5 flex items-center justify-center text-zinc-300 hover:text-white cursor-pointer"
           >
             <Users className="w-5 h-5 text-cyan-400" />
-          </button>
+          </Link>
         )}
       </div>
     </aside>

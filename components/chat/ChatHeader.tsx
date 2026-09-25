@@ -18,6 +18,8 @@ import {
 import { downloadJson } from '@/lib/utils';
 import { db } from '@/lib/db';
 
+import Link from 'next/link';
+
 interface ChatHeaderProps {
   character: Character;
   persona?: UserPersona;
@@ -26,10 +28,8 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ character, persona, onClearSession }: ChatHeaderProps) {
   const {
-    setActiveView,
     isScenarioDrawerOpen,
     setIsScenarioDrawerOpen,
-    setIsSettingsOpen,
     setIsPersonaModalOpen,
     selectedSessionId,
     settings,
@@ -62,13 +62,13 @@ export function ChatHeader({ character, persona, onClearSession }: ChatHeaderPro
     <div className="glass-panel border-b border-white/10 px-4 py-3 flex items-center justify-between gap-3 shrink-0">
       {/* Left: Character Info */}
       <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={() => setActiveView('gallery')}
+        <Link
+          href="/"
           className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 md:hidden cursor-pointer shrink-0"
-          title="Kembali ke Galeri"
+          title="Kembali ke Dashboard"
         >
           <Compass className="w-5 h-5" />
-        </button>
+        </Link>
 
         <div className="relative shrink-0">
           <img

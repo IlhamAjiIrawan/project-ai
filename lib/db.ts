@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS: ApiSettings = {
   customModelName: '',
   
   defaultProvider: 'gemini',
-  defaultModel: 'gemini-2.5-flash',
+  defaultModel: 'gemini-3.8-flash',
   
   temperature: 0.8,
   maxTokens: 1000,
@@ -83,6 +83,12 @@ export async function seedDatabaseIfEmpty() {
           ...DEFAULT_SETTINGS,
           ...existingKeys,
         });
+      } else {
+        // Auto-upgrade legacy deprecated model names if stored
+        const currentStored = await db.settings.get('global');
+        if (currentStored && currentStored.defaultModel === 'gemini-2.5-flash') {
+          await db.settings.update('global', { defaultModel: 'gemini-3.8-flash' });
+        }
       }
     } catch (err) {
       console.error('Error seeding database:', err);

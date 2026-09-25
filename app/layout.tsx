@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Roleplay AI Hub - Multi-Provider Character & Story Studio",
-  description: "Platform AI Roleplay & Interactive Storytelling imersif dengan dukungan Google Gemini, OpenRouter, Groq, dan OpenAI.",
+  title: "Roleplay AI Hub - Multi-Provider AI Story Engine",
+  description: "Studio Roleplay AI & Interactive Storytelling modern dengan Google Gemini, OpenRouter, Groq, dan OpenAI.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-[#09090b] text-[#f4f4f5]">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
