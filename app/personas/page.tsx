@@ -20,6 +20,7 @@ import {
 import { processImageFile } from '@/lib/utils';
 
 const PRESET_USER_AVATARS = [
+  '/avatars/sensei.png',
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
