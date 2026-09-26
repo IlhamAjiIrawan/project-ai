@@ -9,7 +9,11 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { ScenarioDrawer } from './ScenarioDrawer';
+import { MemoryDrawer } from './MemoryDrawer';
+import { PinMemoryModal } from './PinMemoryModal';
+import { RelationshipDrawer } from './RelationshipDrawer';
 import { generateRoleplayResponse } from '@/lib/providers/engine';
+import { calculateAffinityProgress } from '@/lib/relationship';
 import { ChatMessage, ChatSession } from '@/types';
 import { Bot } from 'lucide-react';
 
@@ -31,6 +35,10 @@ export function ChatInterface() {
 
   const characters = useLiveQuery(() => db.characters.toArray(), []) || [];
   const personas = useLiveQuery(() => db.personas.toArray(), []) || [];
+  const session = useLiveQuery(
+    () => (selectedSessionId ? db.chatSessions.get(selectedSessionId) : undefined),
+    [selectedSessionId]
+  );
 
   const character = characters.find((c) => c.id === selectedCharacterId) || characters[0];
   const persona = personas.find((p) => p.id === selectedPersonaId) || personas.find((p) => p.isDefault) || personas[0];
@@ -156,6 +164,12 @@ export function ChatInterface() {
 
     try {
       const allMessages = await db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp');
+      const sessionMemories = await db.sessionMemories.where('sessionId').equals(selectedSessionId).toArray();
+
+      const currentLevel = session?.affinityLevel || 1;
+      const currentExp = session?.affinityExp || 0;
+      const expGain = Math.min(35, Math.max(10, Math.floor(text.length / 12) + 10));
+      const affinityProgress = calculateAffinityProgress(currentLevel, currentExp, expGain);
 
       let accumulated = '';
       const finalReply = await generateRoleplayResponse({
@@ -164,6 +178,8 @@ export function ChatInterface() {
         chatHistory: allMessages,
         newUserMessage: text,
         settings,
+        memories: sessionMemories,
+        affinityLevel: currentLevel,
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -188,6 +204,9 @@ export function ChatInterface() {
       await db.chatSessions.update(selectedSessionId, {
         updatedAt: Date.now(),
         lastMessagePreview: finalReply.substring(0, 60),
+        affinityLevel: affinityProgress.newLevel,
+        affinityExp: affinityProgress.newExp,
+        relationshipTitle: affinityProgress.newTier.title,
       });
     } catch (err: unknown) {
       const error = err as Error;
@@ -210,6 +229,8 @@ export function ChatInterface() {
     const allMessages = await db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp');
     const targetIdx = allMessages.findIndex((m) => m.id === messageId);
     const precedingHistory = targetIdx > 0 ? allMessages.slice(0, targetIdx) : [];
+    const sessionMemories = await db.sessionMemories.where('sessionId').equals(selectedSessionId).toArray();
+    const currentLevel = session?.affinityLevel || 1;
 
     const ac = new AbortController();
     setAbortController(ac);
@@ -224,6 +245,8 @@ export function ChatInterface() {
         chatHistory: precedingHistory,
         newUserMessage: '',
         settings,
+        memories: sessionMemories,
+        affinityLevel: currentLevel,
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -286,7 +309,7 @@ export function ChatInterface() {
 
   const handleClearSession = async () => {
     if (!selectedSessionId) return;
-    if (confirm('Mulai ulang sesi ini dan hapus riwayat obrolan?')) {
+    if (confirm('Mulai ulang sesi ini dan hapus riwayat obrolan? Memori penting akan tetap tersimpan.')) {
       await db.chatMessages.where('sessionId').equals(selectedSessionId).delete();
       await db.chatMessages.put({
         id: `msg_${Date.now()}`,
@@ -334,6 +357,15 @@ export function ChatInterface() {
 
       {/* Scenario Drawer */}
       <ScenarioDrawer character={character} persona={persona} />
+
+      {/* Memory Drawer */}
+      <MemoryDrawer character={character} persona={persona} />
+
+      {/* Relationship Drawer */}
+      <RelationshipDrawer character={character} persona={persona} session={session} />
+
+      {/* Pin Memory Quick Modal */}
+      <PinMemoryModal character={character} />
     </div>
   );
 }

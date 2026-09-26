@@ -14,6 +14,12 @@ interface AppState {
   setIsPersonaModalOpen: (open: boolean) => void;
   isScenarioDrawerOpen: boolean;
   setIsScenarioDrawerOpen: (open: boolean) => void;
+  isMemoryDrawerOpen: boolean;
+  setIsMemoryDrawerOpen: (open: boolean) => void;
+  isRelationshipDrawerOpen: boolean;
+  setIsRelationshipDrawerOpen: (open: boolean) => void;
+  pinMemoryModalData: { messageContent: string; role?: 'user' | 'assistant' | 'system' } | null;
+  setPinMemoryModalData: (data: { messageContent: string; role?: 'user' | 'assistant' | 'system' } | null) => void;
 
   // Selected Entities
   selectedCharacterId: string | null;
@@ -63,6 +69,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsPersonaModalOpen: (open) => set({ isPersonaModalOpen: open }),
   isScenarioDrawerOpen: false,
   setIsScenarioDrawerOpen: (open) => set({ isScenarioDrawerOpen: open }),
+  isMemoryDrawerOpen: false,
+  setIsMemoryDrawerOpen: (open) => set({ isMemoryDrawerOpen: open }),
+  isRelationshipDrawerOpen: false,
+  setIsRelationshipDrawerOpen: (open) => set({ isRelationshipDrawerOpen: open }),
+  pinMemoryModalData: null,
+  setPinMemoryModalData: (data) => set({ pinMemoryModalData: data }),
 
   selectedCharacterId: null,
   setSelectedCharacterId: (id) => set({ selectedCharacterId: id }),

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { Character, LoreEntry, ProviderType } from '@/types';
+import { Character, LoreEntry, ProviderType, ResponseLengthType } from '@/types';
 import {
   X,
   Bot,
@@ -15,6 +15,7 @@ import {
   Save,
   MessageSquare,
 } from 'lucide-react';
+import { POPULAR_MODELS } from '@/lib/providers/types';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80',
@@ -48,7 +49,12 @@ export function CharacterModal() {
   const [customProvider, setCustomProvider] = useState<ProviderType | ''>('');
   const [customModel, setCustomModel] = useState('');
   const [temperature, setTemperature] = useState(0.8);
+  const [responseLength, setResponseLength] = useState<ResponseLengthType | ''>('');
   const [maxTokens, setMaxTokens] = useState(1000);
+  const [topP, setTopP] = useState(0.95);
+  const [topA, setTopA] = useState(0.0);
+  const [topK, setTopK] = useState(40);
+  const [repetitionPenalty, setRepetitionPenalty] = useState(1.1);
 
   const isDark = theme === 'dark';
 
@@ -68,7 +74,12 @@ export function CharacterModal() {
       setCustomProvider(editingCharacter.customProvider || '');
       setCustomModel(editingCharacter.customModel || '');
       setTemperature(editingCharacter.temperature ?? 0.8);
+      setResponseLength(editingCharacter.responseLength || '');
       setMaxTokens(editingCharacter.maxTokens ?? 1000);
+      setTopP(editingCharacter.topP ?? 0.95);
+      setTopA(editingCharacter.topA ?? 0.0);
+      setTopK(editingCharacter.topK ?? 40);
+      setRepetitionPenalty(editingCharacter.repetitionPenalty ?? 1.1);
     } else {
       setName('');
       setTagline('');
@@ -84,11 +95,57 @@ export function CharacterModal() {
       setCustomProvider('');
       setCustomModel('');
       setTemperature(0.8);
+      setResponseLength('');
       setMaxTokens(1000);
+      setTopP(0.95);
+      setTopA(0.0);
+      setTopK(40);
+      setRepetitionPenalty(1.1);
     }
   }, [editingCharacter, isCharacterModalOpen]);
 
   if (!isCharacterModalOpen) return null;
+
+  const applyParameterPreset = (type: 'novelist' | 'creative' | 'rpg' | 'precise') => {
+    switch (type) {
+      case 'novelist':
+        setTemperature(0.85);
+        setResponseLength('long');
+        setMaxTokens(1500);
+        setTopP(0.90);
+        setTopA(0.20);
+        setTopK(40);
+        setRepetitionPenalty(1.10);
+        break;
+      case 'creative':
+        setTemperature(1.05);
+        setResponseLength('medium');
+        setMaxTokens(1200);
+        setTopP(0.95);
+        setTopA(0.00);
+        setTopK(60);
+        setRepetitionPenalty(1.05);
+        break;
+      case 'rpg':
+        setTemperature(0.70);
+        setResponseLength('medium');
+        setMaxTokens(1000);
+        setTopP(0.85);
+        setTopA(0.15);
+        setTopK(40);
+        setRepetitionPenalty(1.12);
+        break;
+      case 'precise':
+        setTemperature(0.40);
+        setResponseLength('short');
+        setMaxTokens(800);
+        setTopP(0.80);
+        setTopA(0.30);
+        setTopK(30);
+        setRepetitionPenalty(1.00);
+        break;
+    }
+  };
 
   const handleAddLoreEntry = () => {
     setLorebook([
@@ -146,7 +203,12 @@ export function CharacterModal() {
       customProvider: customProvider ? (customProvider as ProviderType) : undefined,
       customModel: customModel.trim() || undefined,
       temperature,
+      responseLength: responseLength ? (responseLength as ResponseLengthType) : undefined,
       maxTokens,
+      topP,
+      topA,
+      topK,
+      repetitionPenalty,
       isCustom: true,
       createdAt: editingCharacter ? editingCharacter.createdAt : Date.now(),
       updatedAt: Date.now(),
@@ -471,14 +533,21 @@ export function CharacterModal() {
           )}
 
           {activeTab === 'model' && (
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Provider Override</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Provider Override</label>
                   <select
                     value={customProvider}
-                    onChange={(e) => setCustomProvider(e.target.value as any)}
-                    className={`w-full px-3 py-2 rounded-xl border cursor-pointer ${
+                    onChange={(e) => {
+                      const newProvider = e.target.value as ProviderType | '';
+                      setCustomProvider(newProvider);
+                      if (newProvider && newProvider !== 'custom') {
+                        const defaultForProvider = POPULAR_MODELS.find((m) => m.provider === newProvider);
+                        if (defaultForProvider) setCustomModel(defaultForProvider.id);
+                      }
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
                       isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
                     }`}
                   >
@@ -491,51 +560,272 @@ export function CharacterModal() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Model Name</label>
-                  <input
-                    type="text"
-                    value={customModel}
-                    onChange={(e) => setCustomModel(e.target.value)}
-                    placeholder="deepseek/deepseek-r1, gemma2..."
-                    className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
-                  />
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Model Name Override</label>
+                  {customProvider && customProvider !== 'custom' ? (
+                    <select
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                        isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
+                    >
+                      {POPULAR_MODELS.filter((m) => m.provider === customProvider).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.id})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      placeholder={customProvider === 'custom' ? 'gemma2:27b' : 'Default dari pengaturan'}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-mono border ${
+                        isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
+                    />
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-3 pt-2">
+              {/* Quick Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold">Preset Parameter Cepat</label>
+                  <span className={`text-[11px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Klik untuk atur ke-7 parameter</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('novelist')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Novelist</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya narasi</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('creative')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Kreatif & Bebas</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & tak terduga</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('rpg')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">RPG Master</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis & seimbang</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('precise')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Presisi</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* 7 AI Parameters Section */}
+              <div className={`p-4 rounded-xl border space-y-4 ${
+                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Konfigurasi Detail 7 Parameter AI (Override Karakter)
+                </h3>
+
+                {/* 1. Temperature */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span>Temperature</span>
-                    <span className="font-mono">{temperature}</span>
+                    <span className="font-semibold flex items-center gap-1">
+                      1. Temperature (Kreativitas):
+                      <span className="font-mono text-zinc-400 font-normal">{temperature}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {temperature > 1.0 ? 'Sangat Bebas' : temperature >= 0.7 ? 'Seimbang (Cerita)' : 'Terfokus/Logis'}
+                    </span>
                   </div>
                   <input
                     type="range"
-                    min={0.2}
-                    max={1.5}
-                    step={0.05}
+                    min="0.1"
+                    max="1.5"
+                    step="0.05"
                     value={temperature}
                     onChange={(e) => setTemperature(parseFloat(e.target.value))}
                     className="w-full cursor-pointer accent-zinc-500"
                   />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Mengatur keacakan pemilihan kata khusus karakter ini.
+                  </p>
                 </div>
 
-                <div className="space-y-1">
+                {/* 2. Panjang Respon */}
+                <div className="space-y-1.5 pt-1">
                   <div className="flex justify-between text-xs">
-                    <span>Max Tokens</span>
-                    <span className="font-mono">{maxTokens}</span>
+                    <span className="font-semibold">2. Target Panjang Respon:</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {[
+                      { id: '', label: 'Default', desc: 'Ikuti Pengaturan' },
+                      { id: 'short', label: 'Singkat', desc: '1-2 paragraf' },
+                      { id: 'medium', label: 'Sedang', desc: '2-3 paragraf' },
+                      { id: 'long', label: 'Panjang', desc: '4+ paragraf' },
+                      { id: 'unlimited', label: 'Bebas', desc: 'Fleksibel' },
+                    ].map((len) => (
+                      <button
+                        key={len.id}
+                        type="button"
+                        onClick={() => setResponseLength(len.id as ResponseLengthType | '')}
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                          responseLength === len.id
+                            ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                            : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                        }`}
+                      >
+                        <p className="text-xs font-semibold">{len.label}</p>
+                        <p className={`text-[9px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>{len.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Max Tokens */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      3. Max Tokens (Batas Kuota Output):
+                      <span className="font-mono text-zinc-400 font-normal">{maxTokens}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      ~{Math.round(maxTokens * 0.75)} kata
+                    </span>
                   </div>
                   <input
                     type="range"
-                    min={200}
-                    max={3000}
-                    step={100}
+                    min="200"
+                    max="4000"
+                    step="100"
                     value={maxTokens}
                     onChange={(e) => setMaxTokens(parseInt(e.target.value))}
                     className="w-full cursor-pointer accent-zinc-500"
                   />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Batas keras jumlah token balasan untuk karakter ini.
+                  </p>
+                </div>
+
+                {/* 4. Top-P */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      4. Top-P / Nucleus Sampling:
+                      <span className="font-mono text-zinc-400 font-normal">{topP}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {Math.round(topP * 100)}% kandidat teratas
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    value={topP}
+                    onChange={(e) => setTopP(parseFloat(e.target.value))}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Memilih kata dari kelompok probabilitas teratas.
+                  </p>
+                </div>
+
+                {/* 5. Top-A */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      5. Top-A (Dynamic Cutoff):
+                      <span className="font-mono text-zinc-400 font-normal">{topA}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {topA === 0 ? 'Nonaktif' : 'Aktif'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.05"
+                    value={topA}
+                    onChange={(e) => setTopA(parseFloat(e.target.value))}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Memangkas kata jika kata teratas dominan, mencegah balasan keluar dari persona.
+                  </p>
+                </div>
+
+                {/* 6. Top-K */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      6. Top-K (Batas Jumlah Kandidat):
+                      <span className="font-mono text-zinc-400 font-normal">{topK}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {topK === 0 ? 'Semua kata' : `${topK} kata teratas`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={topK}
+                    onChange={(e) => setTopK(parseInt(e.target.value))}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Membatasi pilihan kata ke sejumlah K kandidat teratas.
+                  </p>
+                </div>
+
+                {/* 7. Repetition Penalty */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      7. Repetition Penalty (Penalti Pengulangan):
+                      <span className="font-mono text-zinc-400 font-normal">{repetitionPenalty}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {repetitionPenalty > 1.0 ? 'Mencegah Looping' : 'Normal'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="2.0"
+                    step="0.05"
+                    value={repetitionPenalty}
+                    onChange={(e) => setRepetitionPenalty(parseFloat(e.target.value))}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Mencegah karakter mengulang kalimat atau frasa secara monoton.
+                  </p>
                 </div>
               </div>
             </div>

@@ -1,5 +1,7 @@
 export type ProviderType = 'gemini' | 'openrouter' | 'groq' | 'openai' | 'custom';
 
+export type ResponseLengthType = 'short' | 'medium' | 'long' | 'unlimited';
+
 export interface ModelOption {
   id: string;
   name: string;
@@ -31,8 +33,16 @@ export interface Character {
   lorebook?: LoreEntry[];
   customProvider?: ProviderType;
   customModel?: string;
+  
+  // Generation Parameters Override
   temperature?: number;
+  responseLength?: ResponseLengthType;
   maxTokens?: number;
+  topP?: number;
+  topA?: number;
+  topK?: number;
+  repetitionPenalty?: number;
+
   isCustom?: boolean;
   createdAt: number;
   updatedAt: number;
@@ -73,6 +83,9 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   lastMessagePreview?: string;
+  affinityLevel?: number; // 1 to 100 (default 1)
+  affinityExp?: number;   // 0 to 100 progress to next level
+  relationshipTitle?: string;
 }
 
 export interface ApiSettings {
@@ -87,17 +100,37 @@ export interface ApiSettings {
   defaultProvider: ProviderType;
   defaultModel: string;
   
+  // 7 AI Generation & Sampling Parameters
   temperature: number;
+  responseLength: ResponseLengthType;
   maxTokens: number;
   topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
+  topA: number;
+  topK: number;
+  repetitionPenalty: number;
+  
+  // Legacy / fallback fields
+  frequencyPenalty?: number;
+  presencePenalty?: number;
   
   streamResponse: boolean;
   enableTTS: boolean;
   ttsVoice: string;
   ttsRate: number;
   ttsPitch: number;
+}
+
+export type MemoryCategory = 'event' | 'relation' | 'fact' | 'promise' | 'secret';
+
+export interface SessionMemory {
+  id: string;
+  sessionId: string;
+  characterId: string;
+  content: string; // The remembered event, fact, or promise
+  category: MemoryCategory;
+  importance?: 'high' | 'medium' | 'low';
+  enabled: boolean;
+  timestamp: number;
 }
 
 export interface AppBackupData {
@@ -108,6 +141,8 @@ export interface AppBackupData {
   messages?: ChatMessage[];
   personas?: UserPersona[];
   settings?: ApiSettings;
+  memories?: SessionMemory[];
 }
 
 export type ActiveView = 'chat' | 'gallery' | 'character_editor' | 'persona_editor';
+

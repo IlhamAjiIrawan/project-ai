@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Character, ChatMessage, ChatSession, UserPersona, ApiSettings } from '@/types';
+import { Character, ChatMessage, ChatSession, UserPersona, ApiSettings, SessionMemory } from '@/types';
 import { PRESET_CHARACTERS, PRESET_PERSONAS } from './presets';
 
 export const DEFAULT_SETTINGS: ApiSettings = {
@@ -14,9 +14,15 @@ export const DEFAULT_SETTINGS: ApiSettings = {
   defaultProvider: 'gemini',
   defaultModel: 'gemini-3.8-flash',
   
+  // 7 AI Generation & Sampling Parameters
   temperature: 0.8,
+  responseLength: 'medium',
   maxTokens: 1000,
   topP: 0.95,
+  topA: 0.0,
+  topK: 40,
+  repetitionPenalty: 1.1,
+  
   frequencyPenalty: 0.0,
   presencePenalty: 0.0,
   
@@ -33,6 +39,7 @@ export class RoleplayDatabase extends Dexie {
   chatMessages!: Table<ChatMessage, string>;
   personas!: Table<UserPersona, string>;
   settings!: Table<ApiSettings & { id: string }, string>;
+  sessionMemories!: Table<SessionMemory, string>;
 
   constructor() {
     super('RoleplayAIEngineDB');
@@ -62,6 +69,16 @@ export class RoleplayDatabase extends Dexie {
           if (char.isCustom === undefined) char.isCustom = false;
         });
       });
+
+    // Version 3 (Dynamic Session Event Memories & Knowledge Journal)
+    this.version(3).stores({
+      characters: 'id, name, category, isCustom, createdAt, updatedAt',
+      chatSessions: 'id, characterId, personaId, updatedAt, createdAt',
+      chatMessages: 'id, sessionId, role, timestamp, [sessionId+timestamp]',
+      personas: 'id, name, isDefault, createdAt',
+      settings: 'id',
+      sessionMemories: 'id, sessionId, characterId, category, enabled, timestamp',
+    });
   }
 }
 

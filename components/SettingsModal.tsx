@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { ApiSettings, ProviderType, AppBackupData } from '@/types';
+import { ApiSettings, ProviderType, AppBackupData, ResponseLengthType } from '@/types';
 import {
   X,
   Key,
@@ -63,6 +63,59 @@ export function SettingsModal() {
     setShowKeys((prev) => ({ ...prev, [keyName]: !prev[keyName] }));
   };
 
+  const applyParameterPreset = (type: 'novelist' | 'creative' | 'rpg' | 'precise') => {
+    switch (type) {
+      case 'novelist':
+        setForm({
+          ...form,
+          temperature: 0.85,
+          responseLength: 'long',
+          maxTokens: 1500,
+          topP: 0.90,
+          topA: 0.20,
+          topK: 40,
+          repetitionPenalty: 1.10,
+        });
+        break;
+      case 'creative':
+        setForm({
+          ...form,
+          temperature: 1.05,
+          responseLength: 'medium',
+          maxTokens: 1200,
+          topP: 0.95,
+          topA: 0.00,
+          topK: 60,
+          repetitionPenalty: 1.05,
+        });
+        break;
+      case 'rpg':
+        setForm({
+          ...form,
+          temperature: 0.70,
+          responseLength: 'medium',
+          maxTokens: 1000,
+          topP: 0.85,
+          topA: 0.15,
+          topK: 40,
+          repetitionPenalty: 1.12,
+        });
+        break;
+      case 'precise':
+        setForm({
+          ...form,
+          temperature: 0.40,
+          responseLength: 'short',
+          maxTokens: 800,
+          topP: 0.80,
+          topA: 0.30,
+          topK: 30,
+          repetitionPenalty: 1.00,
+        });
+        break;
+    }
+  };
+
   const handleTestVoice = () => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -81,6 +134,7 @@ export function SettingsModal() {
     const sessions = await db.chatSessions.toArray();
     const messages = await db.chatMessages.toArray();
     const personas = await db.personas.toArray();
+    const memories = await db.sessionMemories.toArray();
 
     const sanitizedSettings: ApiSettings = {
       ...form,
@@ -91,13 +145,14 @@ export function SettingsModal() {
       customApiKey: '',
     };
 
-    const backupData = {
+    const backupData: AppBackupData = {
       version: 1,
       exportedAt: new Date().toISOString(),
       characters,
       sessions,
       messages,
       personas,
+      memories,
       settings: sanitizedSettings,
     };
 
@@ -120,6 +175,7 @@ export function SettingsModal() {
         if (data.personas) await db.personas.bulkPut(data.personas);
         if (data.sessions) await db.chatSessions.bulkPut(data.sessions);
         if (data.messages) await db.chatMessages.bulkPut(data.messages);
+        if (data.memories) await db.sessionMemories.bulkPut(data.memories);
         if (data.settings) await updateSettings(data.settings);
         alert('Backup data berhasil dipulihkan!');
       }
@@ -398,12 +454,20 @@ export function SettingsModal() {
           {activeTab === 'models' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Provider Utama</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Provider Utama</label>
                   <select
                     value={form.defaultProvider}
-                    onChange={(e) => setForm({ ...form, defaultProvider: e.target.value as ProviderType })}
-                    className={`w-full px-3 py-2 rounded-xl border cursor-pointer ${
+                    onChange={(e) => {
+                      const newProvider = e.target.value as ProviderType;
+                      const defaultForProvider = POPULAR_MODELS.find((m) => m.provider === newProvider);
+                      setForm({
+                        ...form,
+                        defaultProvider: newProvider,
+                        defaultModel: defaultForProvider ? defaultForProvider.id : form.defaultModel,
+                      });
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
                       isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
                     }`}
                   >
@@ -415,53 +479,283 @@ export function SettingsModal() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Model Utama</label>
-                  <input
-                    type="text"
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Model Utama</label>
+                  <select
                     value={form.defaultModel}
                     onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
-                    placeholder="gemini-3.8-flash"
-                    className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
                       isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
                     }`}
-                  />
+                  >
+                    {POPULAR_MODELS.filter((m) => m.provider === form.defaultProvider).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.id})
+                      </option>
+                    ))}
+                    {form.defaultProvider === 'custom' && (
+                      <option value={form.customModelName || 'custom'}>
+                        {form.customModelName || 'Custom Model'}
+                      </option>
+                    )}
+                  </select>
                 </div>
               </div>
 
-              {/* Sliders */}
-              <div className="space-y-3 pt-2">
+              {/* Quick Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold">Preset Parameter Cepat</label>
+                  <span className={`text-[11px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Klik untuk atur ke-7 parameter</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('novelist')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Novelist</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya narasi</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('creative')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Kreatif & Bebas</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & tak terduga</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('rpg')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">RPG Master</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis & seimbang</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyParameterPreset('precise')}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                    }`}
+                  >
+                    <p className="font-semibold text-xs">Presisi</p>
+                    <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* 7 AI Parameters Section */}
+              <div className={`p-4 rounded-xl border space-y-4 ${
+                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Konfigurasi Detail 7 Parameter AI
+                </h3>
+
+                {/* 1. Temperature */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span>Temperature</span>
-                    <span className="font-mono">{form.temperature}</span>
+                    <span className="font-semibold flex items-center gap-1">
+                      1. Temperature (Kreativitas):
+                      <span className="font-mono text-zinc-400 font-normal">{form.temperature}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {form.temperature > 1.0 ? 'Sangat Bebas' : form.temperature >= 0.7 ? 'Seimbang (Cerita)' : 'Terfokus/Logis'}
+                    </span>
                   </div>
                   <input
                     type="range"
-                    min={0.2}
-                    max={1.5}
-                    step={0.05}
+                    min="0.1"
+                    max="1.5"
+                    step="0.05"
                     value={form.temperature}
                     onChange={(e) => setForm({ ...form, temperature: parseFloat(e.target.value) })}
                     className="w-full cursor-pointer accent-zinc-500"
                   />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Mengatur keacakan pemilihan kata. Nilai tinggi membuat cerita lebih bervariasi.
+                  </p>
                 </div>
 
-                <div className="space-y-1">
+                {/* 2. Panjang Respon */}
+                <div className="space-y-1.5 pt-1">
                   <div className="flex justify-between text-xs">
-                    <span>Max Tokens</span>
-                    <span className="font-mono">{form.maxTokens}</span>
+                    <span className="font-semibold">2. Target Panjang Respon:</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'short', label: 'Singkat', desc: '1-2 paragraf padat' },
+                      { id: 'medium', label: 'Sedang', desc: '2-3 paragraf naratif' },
+                      { id: 'long', label: 'Panjang / Novel', desc: '4+ paragraf deskriptif' },
+                      { id: 'unlimited', label: 'Bebas', desc: 'Sesuai alur cerita' },
+                    ].map((len) => (
+                      <button
+                        key={len.id}
+                        type="button"
+                        onClick={() => setForm({ ...form, responseLength: len.id as ResponseLengthType })}
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                          (form.responseLength || 'medium') === len.id
+                            ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                            : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                        }`}
+                      >
+                        <p className="text-xs font-semibold">{len.label}</p>
+                        <p className={`text-[9px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>{len.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Max Tokens */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      3. Max Tokens (Batas Kuota Output):
+                      <span className="font-mono text-zinc-400 font-normal">{form.maxTokens}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      ~{Math.round(form.maxTokens * 0.75)} kata
+                    </span>
                   </div>
                   <input
                     type="range"
-                    min={200}
-                    max={4000}
-                    step={100}
+                    min="200"
+                    max="4000"
+                    step="100"
                     value={form.maxTokens}
                     onChange={(e) => setForm({ ...form, maxTokens: parseInt(e.target.value) })}
                     className="w-full cursor-pointer accent-zinc-500"
                   />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Batas keras jumlah token balasan yang boleh dihasilkan AI dalam satu kali respons.
+                  </p>
                 </div>
+
+                {/* 4. Top-P */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      4. Top-P / Nucleus Sampling:
+                      <span className="font-mono text-zinc-400 font-normal">{form.topP ?? 0.95}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {Math.round((form.topP ?? 0.95) * 100)}% kandidat teratas
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    value={form.topP ?? 0.95}
+                    onChange={(e) => setForm({ ...form, topP: parseFloat(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Memilih kata dari kelompok teratas dengan total akumulasi probabilitas P.
+                  </p>
+                </div>
+
+                {/* 5. Top-A */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      5. Top-A (Dynamic Cutoff):
+                      <span className="font-mono text-zinc-400 font-normal">{form.topA ?? 0.0}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {(form.topA ?? 0.0) === 0 ? 'Nonaktif' : 'Aktif'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.05"
+                    value={form.topA ?? 0.0}
+                    onChange={(e) => setForm({ ...form, topA: parseFloat(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Memangkas kata jika probabilitas kata teratas dominan, mencegah balasan ngelantur.
+                  </p>
+                </div>
+
+                {/* 6. Top-K */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      6. Top-K (Batas Jumlah Kandidat):
+                      <span className="font-mono text-zinc-400 font-normal">{form.topK ?? 40}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {form.topK === 0 ? 'Semua kata' : `${form.topK ?? 40} kata teratas`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={form.topK ?? 40}
+                    onChange={(e) => setForm({ ...form, topK: parseInt(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Membatasi pilihan hanya ke sejumlah K kata terbaik sebelum sampling.
+                  </p>
+                </div>
+
+                {/* 7. Repetition Penalty */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      7. Repetition Penalty (Penalti Pengulangan):
+                      <span className="font-mono text-zinc-400 font-normal">{form.repetitionPenalty ?? 1.1}</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {(form.repetitionPenalty ?? 1.1) > 1.0 ? 'Mencegah Looping' : 'Normal'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="2.0"
+                    step="0.05"
+                    value={form.repetitionPenalty ?? 1.1}
+                    onChange={(e) => setForm({ ...form, repetitionPenalty: parseFloat(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Mencegah karakter mengulang kalimat atau frasa yang sama secara repetitif.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stream toggle */}
+              <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <div>
+                  <h4 className="font-semibold text-xs">Streaming Respons</h4>
+                  <p className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    Menampilkan kata per kata secara real-time seperti mengetik
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={form.streamResponse}
+                  onChange={(e) => setForm({ ...form, streamResponse: e.target.checked })}
+                  className="w-4 h-4 cursor-pointer"
+                />
               </div>
             </div>
           )}

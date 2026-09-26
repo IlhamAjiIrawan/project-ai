@@ -16,6 +16,7 @@ import {
   Save,
   Bot,
   User,
+  Brain,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -41,7 +42,7 @@ export function ChatMessageItem({
   onSwipeChange,
   isLastAssistantMessage = false,
 }: ChatMessageItemProps) {
-  const { isGenerating, settings, theme } = useAppStore();
+  const { isGenerating, settings, theme, setPinMemoryModalData } = useAppStore();
 
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -273,6 +274,16 @@ export function ChatMessageItem({
               title="Edit Pesan"
             >
               <Edit3 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => setPinMemoryModalData({ messageContent: currentContent, role: message.role })}
+              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+                isDark ? 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-amber-600 hover:bg-zinc-200'
+              }`}
+              title="Simpan ke Memori Karakter"
+            >
+              <Brain className="w-3.5 h-3.5" />
             </button>
 
             {isAssistant && isLastAssistantMessage && !isGenerating && onReroll && (

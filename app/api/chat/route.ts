@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiSettings, ProviderType } from '@/types';
+import { ApiSettings, ProviderType, ResponseLengthType } from '@/types';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
@@ -17,8 +17,12 @@ interface ChatRequestBody {
   systemPrompt: string;
   messages: Array<{ role: string; content: string }>;
   temperature?: number;
+  responseLength?: ResponseLengthType;
   maxTokens?: number;
   topP?: number;
+  topA?: number;
+  topK?: number;
+  repetitionPenalty?: number;
   settings: ApiSettings;
 }
 
@@ -73,6 +77,9 @@ export async function POST(req: NextRequest) {
       temperature = 0.8,
       maxTokens = 1000,
       topP = 0.95,
+      topA = 0.0,
+      topK = 40,
+      repetitionPenalty = 1.1,
       settings,
     } = body;
 
@@ -122,12 +129,35 @@ export async function POST(req: NextRequest) {
     const safeTemperature = typeof temperature === 'number' ? Math.max(0, Math.min(2.0, temperature)) : 0.8;
     const safeMaxTokens = typeof maxTokens === 'number' ? Math.max(1, Math.min(8192, Math.floor(maxTokens))) : 1000;
     const safeTopP = typeof topP === 'number' ? Math.max(0, Math.min(1.0, topP)) : 0.95;
+    const safeTopA = typeof topA === 'number' ? Math.max(0, Math.min(1.0, topA)) : 0.0;
+    const safeTopK = typeof topK === 'number' ? Math.max(0, Math.min(100, Math.floor(topK))) : 40;
+    const safeRepetitionPenalty = typeof repetitionPenalty === 'number' ? Math.max(1.0, Math.min(2.0, repetitionPenalty)) : 1.1;
 
     // Validate and dispatch to appropriate provider
     if (provider === 'gemini') {
-      return await handleGemini(systemPrompt, messages, model, safeTemperature, safeMaxTokens, safeTopP, settings);
+      return await handleGemini(
+        systemPrompt,
+        messages,
+        model,
+        safeTemperature,
+        safeMaxTokens,
+        safeTopP,
+        safeTopK,
+        settings
+      );
     } else if (provider === 'openrouter') {
-      return await handleOpenRouter(systemPrompt, messages, model, safeTemperature, safeMaxTokens, safeTopP, settings);
+      return await handleOpenRouter(
+        systemPrompt,
+        messages,
+        model,
+        safeTemperature,
+        safeMaxTokens,
+        safeTopP,
+        safeTopA,
+        safeTopK,
+        safeRepetitionPenalty,
+        settings
+      );
     } else if (provider === 'groq') {
       return await handleOpenAICompatible(
         'https://api.groq.com/openai/v1/chat/completions',
@@ -138,6 +168,7 @@ export async function POST(req: NextRequest) {
         safeTemperature,
         safeMaxTokens,
         safeTopP,
+        safeRepetitionPenalty,
         'Groq'
       );
     } else if (provider === 'openai') {
@@ -150,12 +181,12 @@ export async function POST(req: NextRequest) {
         safeTemperature,
         safeMaxTokens,
         safeTopP,
+        safeRepetitionPenalty,
         'OpenAI'
       );
     } else if (provider === 'custom') {
       const rawBaseUrl = settings.customBaseUrl?.trim() || 'http://localhost:11434/v1';
       
-      // Basic SSRF & protocol validation
       if (!rawBaseUrl.startsWith('http://') && !rawBaseUrl.startsWith('https://')) {
         return NextResponse.json(
           { error: 'Custom Base URL harus menggunakan protokol http:// atau https://' },
@@ -163,8 +194,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Validate: block bare ollama.com homepage (not a valid API endpoint)
-      // Note: https://ollama.com/v1 IS a valid Ollama Cloud API endpoint — do NOT block it.
       const ollamaHomepagePattern = /^https?:\/\/(?:www\.)?ollama\.com\/?$/i;
       if (ollamaHomepagePattern.test(rawBaseUrl)) {
         return NextResponse.json(
@@ -195,7 +224,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const finalApiKey = customApiKey || 'ollama'; // 'ollama' only valid for local servers without auth
+      const finalApiKey = customApiKey || 'ollama';
       const customModel = settings.customModelName?.trim() || model || 'llama3';
 
       return await handleOpenAICompatible(
@@ -207,6 +236,7 @@ export async function POST(req: NextRequest) {
         safeTemperature,
         safeMaxTokens,
         safeTopP,
+        safeRepetitionPenalty,
         'Custom/Ollama'
       );
     } else {
@@ -230,6 +260,7 @@ async function handleGemini(
   temperature: number,
   maxTokens: number,
   topP: number,
+  topK: number,
   settings: ApiSettings
 ) {
   const apiKey = settings.geminiApiKey?.trim();
@@ -259,14 +290,19 @@ async function handleGemini(
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${apiKey}&alt=sse`;
 
+  const generationConfig: Record<string, any> = {
+    temperature,
+    maxOutputTokens: maxTokens,
+    topP,
+  };
+  if (topK > 0) {
+    generationConfig.topK = topK;
+  }
+
   const payload = {
     contents: contents.length > 0 ? contents : [{ role: 'user', parts: [{ text: 'Halo' }] }],
     systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-      topP,
-    },
+    generationConfig,
   };
 
   const response = await fetch(endpoint, {
@@ -306,6 +342,9 @@ async function handleOpenRouter(
   temperature: number,
   maxTokens: number,
   topP: number,
+  topA: number,
+  topK: number,
+  repetitionPenalty: number,
   settings: ApiSettings
 ) {
   const apiKey = settings.openRouterApiKey?.trim();
@@ -324,6 +363,19 @@ async function handleOpenRouter(
     formattedMessages.push({ role: msg.role, content: msg.content });
   }
 
+  const payload: Record<string, any> = {
+    model: model || 'deepseek/deepseek-chat',
+    messages: formattedMessages,
+    temperature,
+    max_tokens: maxTokens,
+    top_p: topP,
+    stream: true,
+  };
+
+  if (topA > 0) payload.top_a = topA;
+  if (topK > 0) payload.top_k = topK;
+  if (repetitionPenalty > 1.0) payload.repetition_penalty = repetitionPenalty;
+
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -333,14 +385,7 @@ async function handleOpenRouter(
       'HTTP-Referer': 'http://localhost:3000',
       'X-Title': 'Roleplay AI Hub',
     },
-    body: JSON.stringify({
-      model: model || 'deepseek/deepseek-chat',
-      messages: formattedMessages,
-      temperature,
-      max_tokens: maxTokens,
-      top_p: topP,
-      stream: true,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -376,6 +421,7 @@ async function handleOpenAICompatible(
   temperature: number,
   maxTokens: number,
   topP: number,
+  repetitionPenalty: number,
   providerLabel: string
 ) {
   const formattedMessages: Array<{ role: string; content: string }> = [];
@@ -393,19 +439,31 @@ async function handleOpenAICompatible(
     headers['Authorization'] = `Bearer ${apiKey}`;
   }
 
+  const payload: Record<string, any> = {
+    model: modelName,
+    messages: formattedMessages,
+    temperature,
+    max_tokens: maxTokens,
+    top_p: topP,
+    stream: true,
+  };
+
+  // Map repetition penalty for OpenAI/Groq or Ollama format
+  if (repetitionPenalty > 1.0) {
+    if (providerLabel === 'Custom/Ollama') {
+      payload.options = { repeat_penalty: repetitionPenalty };
+    } else {
+      // Frequency penalty approximation: (repPenalty - 1) * 2.0 (scaled to 0.0 - 1.0)
+      payload.frequency_penalty = Math.min(1.5, (repetitionPenalty - 1.0) * 2.0);
+    }
+  }
+
   let response: globalThis.Response;
   try {
     response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        model: modelName,
-        messages: formattedMessages,
-        temperature,
-        max_tokens: maxTokens,
-        top_p: topP,
-        stream: true,
-      }),
+      body: JSON.stringify(payload),
     });
   } catch (networkErr: unknown) {
     const errorMsg = networkErr instanceof Error ? networkErr.message : String(networkErr);

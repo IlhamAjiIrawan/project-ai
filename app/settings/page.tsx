@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { ApiSettings, ProviderType, AppBackupData } from '@/types';
+import { ApiSettings, ProviderType, AppBackupData, ResponseLengthType } from '@/types';
 import {
   Key,
   Sliders,
@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Play,
+  HelpCircle,
 } from 'lucide-react';
 import { POPULAR_MODELS } from '@/lib/providers/types';
 import { downloadJson, readJsonFile } from '@/lib/utils';
@@ -25,7 +26,7 @@ import { PRESET_CHARACTERS, PRESET_PERSONAS } from '@/lib/presets';
 
 export default function SettingsHubPage() {
   const { settings, updateSettings, theme } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'keys' | 'models' | 'tts' | 'data'>('keys');
+  const [activeTab, setActiveTab] = useState<'keys' | 'models' | 'tts' | 'data'>('models');
 
   const [form, setForm] = useState<ApiSettings>(settings);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -78,6 +79,7 @@ export default function SettingsHubPage() {
     const sessions = await db.chatSessions.toArray();
     const messages = await db.chatMessages.toArray();
     const personas = await db.personas.toArray();
+    const memories = await db.sessionMemories.toArray();
 
     const sanitizedSettings: ApiSettings = {
       ...form,
@@ -88,13 +90,14 @@ export default function SettingsHubPage() {
       customApiKey: '',
     };
 
-    const backupData = {
+    const backupData: AppBackupData = {
       version: 1,
       exportedAt: new Date().toISOString(),
       characters,
       sessions,
       messages,
       personas,
+      memories,
       settings: sanitizedSettings,
     };
 
@@ -117,6 +120,7 @@ export default function SettingsHubPage() {
         if (data.personas) await db.personas.bulkPut(data.personas);
         if (data.sessions) await db.chatSessions.bulkPut(data.sessions);
         if (data.messages) await db.chatMessages.bulkPut(data.messages);
+        if (data.memories) await db.sessionMemories.bulkPut(data.memories);
         if (data.settings) await updateSettings(data.settings);
         alert('Backup data berhasil dipulihkan!');
       }
@@ -135,19 +139,55 @@ export default function SettingsHubPage() {
     }
   };
 
-  const applyParameterPreset = (type: 'creative' | 'novelist' | 'rpg' | 'precise') => {
+  const applyParameterPreset = (type: 'novelist' | 'creative' | 'rpg' | 'precise') => {
     switch (type) {
-      case 'creative':
-        setForm({ ...form, temperature: 1.0, topP: 0.95, frequencyPenalty: 0.2, presencePenalty: 0.2 });
-        break;
       case 'novelist':
-        setForm({ ...form, temperature: 0.85, topP: 0.9, frequencyPenalty: 0.15, presencePenalty: 0.1, maxTokens: 1500 });
+        setForm({
+          ...form,
+          temperature: 0.85,
+          responseLength: 'long',
+          maxTokens: 1500,
+          topP: 0.90,
+          topA: 0.20,
+          topK: 40,
+          repetitionPenalty: 1.10,
+        });
+        break;
+      case 'creative':
+        setForm({
+          ...form,
+          temperature: 1.05,
+          responseLength: 'medium',
+          maxTokens: 1200,
+          topP: 0.95,
+          topA: 0.00,
+          topK: 60,
+          repetitionPenalty: 1.05,
+        });
         break;
       case 'rpg':
-        setForm({ ...form, temperature: 0.75, topP: 0.85, frequencyPenalty: 0.05, presencePenalty: 0.0, maxTokens: 1200 });
+        setForm({
+          ...form,
+          temperature: 0.70,
+          responseLength: 'medium',
+          maxTokens: 1000,
+          topP: 0.85,
+          topA: 0.15,
+          topK: 40,
+          repetitionPenalty: 1.12,
+        });
         break;
       case 'precise':
-        setForm({ ...form, temperature: 0.4, topP: 0.7, frequencyPenalty: 0.0, presencePenalty: 0.0 });
+        setForm({
+          ...form,
+          temperature: 0.40,
+          responseLength: 'short',
+          maxTokens: 800,
+          topP: 0.70,
+          topA: 0.30,
+          topK: 20,
+          repetitionPenalty: 1.00,
+        });
         break;
     }
   };
@@ -161,10 +201,10 @@ export default function SettingsHubPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              Pengaturan & API Hub
+              Pengaturan & Parameter AI
             </h1>
             <p className={`text-xs sm:text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
-              Kelola kunci API, preferensi model, parameter respon cerita, dan cadangan data.
+              Konfigurasi kunci API, model default, 7 parameter respon cerita, dan pencadangan data.
             </p>
           </div>
 
@@ -198,18 +238,6 @@ export default function SettingsHubPage() {
           isDark ? 'border-zinc-800' : 'border-zinc-100'
         }`}>
           <button
-            onClick={() => setActiveTab('keys')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
-              activeTab === 'keys'
-                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
-                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
-            }`}
-          >
-            <Key className="w-3.5 h-3.5" />
-            <span>API Keys</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('models')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               activeTab === 'models'
@@ -218,7 +246,19 @@ export default function SettingsHubPage() {
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Model & Parameter</span>
+            <span>Parameter AI (7 Kontrol)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('keys')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
+              activeTab === 'keys'
+                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
+            }`}
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span>API Keys & Provider</span>
           </button>
 
           <button
@@ -246,7 +286,296 @@ export default function SettingsHubPage() {
           </button>
         </div>
 
-        {/* Tab 1: API Keys */}
+        {/* Tab 1: 7 AI Parameters & Models */}
+        {activeTab === 'models' && (
+          <div className="space-y-6">
+            {/* Default Provider & Model */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Provider Utama</label>
+                <select
+                  value={form.defaultProvider}
+                  onChange={(e) => {
+                    const newProv = e.target.value as ProviderType;
+                    const defaultForProv = POPULAR_MODELS.find((m) => m.provider === newProv)?.id || '';
+                    setForm({ ...form, defaultProvider: newProv, defaultModel: defaultForProv });
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
+                >
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom / Local LLM</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Model Utama</label>
+                <select
+                  value={form.defaultModel}
+                  onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
+                >
+                  {POPULAR_MODELS.filter((m) => m.provider === form.defaultProvider).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.id})
+                    </option>
+                  ))}
+                  {form.defaultProvider === 'custom' && (
+                    <option value={form.customModelName || 'custom'}>
+                      {form.customModelName || 'Custom Model'}
+                    </option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold">Preset Parameter Cepat</label>
+                <span className={`text-[11px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Klik untuk atur ke-7 parameter sekaligus</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyParameterPreset('novelist')}
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
+                >
+                  <p className="font-semibold text-xs">Novelist</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya narasi</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyParameterPreset('creative')}
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
+                >
+                  <p className="font-semibold text-xs">Kreatif & Bebas</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & plot tak terduga</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyParameterPreset('rpg')}
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
+                >
+                  <p className="font-semibold text-xs">RPG Master</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis, terarah & seimbang</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyParameterPreset('precise')}
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
+                >
+                  <p className="font-semibold text-xs">Presisi</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
+                </button>
+              </div>
+            </div>
+
+            {/* 7 AI Parameters Section */}
+            <div className={`p-4 rounded-xl border space-y-4 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+            }`}>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Konfigurasi Detail 7 Parameter AI
+              </h3>
+
+              {/* 1. Temperature */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    1. Temperature (Kreativitas):
+                    <span className="font-mono text-zinc-400 font-normal">{form.temperature}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {form.temperature > 1.0 ? 'Sangat Bebas' : form.temperature >= 0.7 ? 'Seimbang (Cerita)' : 'Terfokus/Logis'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.5"
+                  step="0.05"
+                  value={form.temperature}
+                  onChange={(e) => setForm({ ...form, temperature: parseFloat(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Mengatur keacakan pemilihan kata. Nilai tinggi membuat cerita lebih bervariasi.
+                </p>
+              </div>
+
+              {/* 2. Panjang Respon */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold">2. Target Panjang Respon (Panduan Gaya Cerita):</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'short', label: 'Singkat', desc: '1-2 paragraf padat' },
+                    { id: 'medium', label: 'Sedang', desc: '2-3 paragraf naratif' },
+                    { id: 'long', label: 'Panjang / Novel', desc: '4+ paragraf deskriptif' },
+                    { id: 'unlimited', label: 'Bebas', desc: 'Sesuai alur cerita' },
+                  ].map((len) => (
+                    <button
+                      key={len.id}
+                      type="button"
+                      onClick={() => setForm({ ...form, responseLength: len.id as ResponseLengthType })}
+                      className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                        (form.responseLength || 'medium') === len.id
+                          ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                          : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                      }`}
+                    >
+                      <p className="text-xs font-semibold">{len.label}</p>
+                      <p className={`text-[9px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>{len.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Max Tokens */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    3. Max Tokens (Batas Kuota Output):
+                    <span className="font-mono text-zinc-400 font-normal">{form.maxTokens}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    ~{Math.round(form.maxTokens * 0.75)} kata
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="200"
+                  max="4000"
+                  step="100"
+                  value={form.maxTokens}
+                  onChange={(e) => setForm({ ...form, maxTokens: parseInt(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Batas keras jumlah token balasan yang boleh dihasilkan AI dalam satu kali kirim.
+                </p>
+              </div>
+
+              {/* 4. Top-P */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    4. Top-P / Nucleus Sampling:
+                    <span className="font-mono text-zinc-400 font-normal">{form.topP}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {Math.round(form.topP * 100)}% kandidat teratas
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.05"
+                  value={form.topP}
+                  onChange={(e) => setForm({ ...form, topP: parseFloat(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Memilih kata dari kelompok teratas dengan total akumulasi probabilitas P, membuang kata aneh di bagian bawah.
+                </p>
+              </div>
+
+              {/* 5. Top-A */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    5. Top-A (Dynamic Cutoff):
+                    <span className="font-mono text-zinc-400 font-normal">{form.topA ?? 0.0}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {(form.topA ?? 0.0) === 0 ? 'Nonaktif' : 'Aktif'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.0"
+                  max="1.0"
+                  step="0.05"
+                  value={form.topA ?? 0.0}
+                  onChange={(e) => setForm({ ...form, topA: parseFloat(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Memangkas kata lain jika AI sangat yakin pada kata teratas, mencegah karakter berbicara ngelantur.
+                </p>
+              </div>
+
+              {/* 6. Top-K */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    6. Top-K (Batas Jumlah Kandidat):
+                    <span className="font-mono text-zinc-400 font-normal">{form.topK ?? 40}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {form.topK === 0 ? 'Semua kata' : `${form.topK} kata teratas`}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={form.topK ?? 40}
+                  onChange={(e) => setForm({ ...form, topK: parseInt(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Membatasi pilihan hanya ke sejumlah K kata dengan probabilitas tertinggi sebelum sampling.
+                </p>
+              </div>
+
+              {/* 7. Repetition Penalty */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold flex items-center gap-1">
+                    7. Repetition Penalty (Penalti Pengulangan):
+                    <span className="font-mono text-zinc-400 font-normal">{form.repetitionPenalty ?? 1.1}</span>
+                  </span>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {(form.repetitionPenalty ?? 1.1) > 1.0 ? 'Mencegah Looping' : 'Normal'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1.0"
+                  max="1.5"
+                  step="0.02"
+                  value={form.repetitionPenalty ?? 1.1}
+                  onChange={(e) => setForm({ ...form, repetitionPenalty: parseFloat(e.target.value) })}
+                  className="w-full cursor-pointer accent-zinc-500"
+                />
+                <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  Mencegah AI mengulang-ulang frasa klise atau pola kalimat yang sama di setiap balasan.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: API Keys */}
         {activeTab === 'keys' && (
           <div className="space-y-4">
             <div className={`p-3 rounded-xl border text-xs ${
@@ -510,155 +839,6 @@ export default function SettingsHubPage() {
                     }`}
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Models & Hyperparameters */}
-        {activeTab === 'models' && (
-          <div className="space-y-5">
-            {/* Default Provider & Model */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold">Provider Utama</label>
-                <select
-                  value={form.defaultProvider}
-                  onChange={(e) => {
-                    const newProv = e.target.value as ProviderType;
-                    const defaultForProv = POPULAR_MODELS.find((m) => m.provider === newProv)?.id || '';
-                    setForm({ ...form, defaultProvider: newProv, defaultModel: defaultForProv });
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
-                >
-                  <option value="gemini">Google Gemini</option>
-                  <option value="openrouter">OpenRouter</option>
-                  <option value="groq">Groq</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="custom">Custom / Local LLM</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold">Model Utama</label>
-                <select
-                  value={form.defaultModel}
-                  onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
-                >
-                  {POPULAR_MODELS.filter((m) => m.provider === form.defaultProvider).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.id})
-                    </option>
-                  ))}
-                  {form.defaultProvider === 'custom' && (
-                    <option value={form.customModelName || 'custom'}>
-                      {form.customModelName || 'Custom Model'}
-                    </option>
-                  )}
-                </select>
-              </div>
-            </div>
-
-            {/* Hyperparameter Quick Presets */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold">Preset Gaya Cerita</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => applyParameterPreset('novelist')}
-                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                  }`}
-                >
-                  <p className="font-semibold text-xs">Novelist</p>
-                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyParameterPreset('creative')}
-                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                  }`}
-                >
-                  <p className="font-semibold text-xs">Kreatif</p>
-                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & bebas</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyParameterPreset('rpg')}
-                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                  }`}
-                >
-                  <p className="font-semibold text-xs">RPG Master</p>
-                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis & terarah</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyParameterPreset('precise')}
-                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                  }`}
-                >
-                  <p className="font-semibold text-xs">Presisi</p>
-                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Sliders */}
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium">Temperature</span>
-                  <span className="font-mono">{form.temperature}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1.5"
-                  step="0.05"
-                  value={form.temperature}
-                  onChange={(e) => setForm({ ...form, temperature: parseFloat(e.target.value) })}
-                  className="w-full cursor-pointer accent-zinc-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium">Max Tokens</span>
-                  <span className="font-mono">{form.maxTokens}</span>
-                </div>
-                <input
-                  type="range"
-                  min="200"
-                  max="4000"
-                  step="100"
-                  value={form.maxTokens}
-                  onChange={(e) => setForm({ ...form, maxTokens: parseInt(e.target.value) })}
-                  className="w-full cursor-pointer accent-zinc-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium">Top P</span>
-                  <span className="font-mono">{form.topP}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.05"
-                  value={form.topP}
-                  onChange={(e) => setForm({ ...form, topP: parseFloat(e.target.value) })}
-                  className="w-full cursor-pointer accent-zinc-500"
-                />
               </div>
             </div>
           </div>

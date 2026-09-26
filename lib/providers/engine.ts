@@ -1,5 +1,6 @@
-import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType } from '@/types';
+import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType, SessionMemory, MemoryCategory } from '@/types';
 import { decryptSensitiveText } from '@/lib/crypto';
+import { getRelationshipTier } from '@/lib/relationship';
 
 export interface GenerateRoleplayOptions {
   character: Character;
@@ -7,6 +8,8 @@ export interface GenerateRoleplayOptions {
   chatHistory: ChatMessage[];
   newUserMessage: string;
   settings: ApiSettings;
+  memories?: SessionMemory[];
+  affinityLevel?: number;
   onChunk?: (chunk: string) => void;
   signal?: AbortSignal;
 }
@@ -66,7 +69,10 @@ export function buildOptimizedHistory(
 export function constructRoleplaySystemPrompt(
   character: Character,
   userPersona?: UserPersona,
-  recentChatText: string = ''
+  recentChatText: string = '',
+  responseLength: string = 'medium',
+  memories: SessionMemory[] = [],
+  affinityLevel: number = 1
 ): string {
   const userName = userPersona?.name || 'User';
   const userBio = userPersona?.bio ? `[Profil Pemain/User: ${userPersona.name} - ${userPersona.bio}]` : '';
@@ -83,6 +89,52 @@ export function constructRoleplaySystemPrompt(
     if (triggeredEntries.length > 0) {
       activeLore = `\n[Memori / World Lore Tambahan Terkait:\n${triggeredEntries.map((e) => `- ${e.content}`).join('\n')}\n]`;
     }
+  }
+
+  // Ingest dynamic session memories (episodic event memory)
+  let activeMemories = '';
+  if (memories && memories.length > 0) {
+    const enabledMemories = memories.filter((m) => m.enabled !== false);
+    if (enabledMemories.length > 0) {
+      const memoryBullets = enabledMemories
+        .map((m) => {
+          const categoryTag =
+            m.category === 'promise'
+              ? 'Janji/Komitmen'
+              : m.category === 'relation'
+              ? 'Status Hubungan'
+              : m.category === 'secret'
+              ? 'Rahasia/Fakta Tersembunyi'
+              : m.category === 'fact'
+              ? 'Fakta Penting'
+              : 'Peristiwa Terjadi';
+          return `- [${categoryTag}] ${m.content.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}`;
+        })
+        .join('\n');
+
+      activeMemories = `\n[MEMORI PERISTIWA PENTING DARI SESI INI (JANGAN PERNAH DILUPAKAN OLEH ${character.name.toUpperCase()})]:\n${memoryBullets}\n`;
+    }
+  }
+
+  // Ingest Relationship / Affinity Tier directives
+  const tierInfo = getRelationshipTier(affinityLevel);
+  const relationshipBehavior = tierInfo.behaviorPrompt
+    .replace(/\{\{char\}\}/gi, character.name)
+    .replace(/\{\{user\}\}/gi, userName);
+
+  const relationshipBlock = `\n[STATUS TINGKATAN HUBUNGAN SAAT INI (LEVEL ${affinityLevel}/100: ${tierInfo.title.toUpperCase()} ${tierInfo.emoji})]
+Status Hubungan: ${tierInfo.title} (${tierInfo.subTitle})
+Panduan Sikap & Perlakuan terhadap ${userName}:
+${relationshipBehavior}\n`;
+
+  // Length guide
+  let lengthInstruction = 'Gaya Panjang Respon: Sedang (2-3 paragraf naratif seimbang antara aksi dan dialog).';
+  if (responseLength === 'short') {
+    lengthInstruction = 'Gaya Panjang Respon: Singkat (1-2 paragraf padat). Utamakan dialog cepat dan aksi langsung.';
+  } else if (responseLength === 'long') {
+    lengthInstruction = 'Gaya Panjang Respon: Panjang & Deskriptif (4+ paragraf gaya novel). Berikan detail atmosferik, monolog batin, dan dinamika cerita yang mendalam.';
+  } else if (responseLength === 'unlimited') {
+    lengthInstruction = 'Gaya Panjang Respon: Bebas dan fleksibel sesuai kebutuhan perkembangan alur cerita.';
   }
 
   // Replace {{char}} and {{user}} placeholders
@@ -111,16 +163,21 @@ ${userBio}
 
 ${scenarioText}
 
+${relationshipBlock}
+
 ${activeLore}
+
+${activeMemories}
 
 ${exampleDialogueText}
 
 [ATURAN PENULISAN FORMAT ROLEPLAY]
 1. Selalu pertahankan identitas dan watak ${character.name}.
-2. Tuliskan tindakan, bahasa tubuh, ekspresi, dan narasi atmosferik di dalam tanda bintang: *contoh tindakan atau desahan nafas*.
-3. Tuliskan kata-kata yang diucapkan langsung dalam tanda kutip: "contoh ucapan".
-4. Tanggapi dengan gaya penulisan novel interaktif yang hidup, dinamis, dan tidak kaku.
-5. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.`.trim();
+2. ${lengthInstruction}
+3. Tuliskan tindakan, bahasa tubuh, ekspresi, dan narasi atmosferik di dalam tanda bintang: *contoh tindakan atau desahan nafas*.
+4. Tuliskan kata-kata yang diucapkan langsung dalam tanda kutip: "contoh ucapan".
+5. Tanggapi dengan gaya penulisan novel interaktif yang hidup, dinamis, dan tidak kaku.
+6. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.`.trim();
 }
 
 /**
@@ -181,8 +238,24 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const recentMessages = chatHistory.slice(-6);
   const recentText = recentMessages.map((m) => m.content).join(' ') + ' ' + newUserMessage;
 
+  // Resolve 7 parameters with character-level override fallback to global settings
+  const temperature = character.temperature ?? settings.temperature ?? 0.8;
+  const responseLength = character.responseLength ?? settings.responseLength ?? 'medium';
+  const maxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
+  const topP = character.topP ?? settings.topP ?? 0.95;
+  const topA = character.topA ?? settings.topA ?? 0.0;
+  const topK = character.topK ?? settings.topK ?? 40;
+  const repetitionPenalty = character.repetitionPenalty ?? settings.repetitionPenalty ?? 1.1;
+
   // Construct System Prompt
-  const systemPrompt = constructRoleplaySystemPrompt(character, userPersona, recentText);
+  const systemPrompt = constructRoleplaySystemPrompt(
+    character,
+    userPersona,
+    recentText,
+    responseLength,
+    options.memories || [],
+    options.affinityLevel || 1
+  );
 
   // Format message history with smart token-budget context window
   const historyForLLM = buildOptimizedHistory(chatHistory, 6000);
@@ -195,12 +268,7 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     });
   }
 
-  const temperature = character.temperature ?? settings.temperature ?? 0.8;
-  const maxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
-  const topP = settings.topP ?? 0.95;
-
   // Decrypt all API keys client-side before sending to the server.
-  // The server (Node.js) cannot decrypt them because Web Crypto API is browser-only.
   const decryptedSettings: ApiSettings = {
     ...settings,
     geminiApiKey: await decryptSensitiveText(settings.geminiApiKey || ''),
@@ -216,8 +284,12 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     systemPrompt,
     messages: historyForLLM,
     temperature,
+    responseLength,
     maxTokens,
     topP,
+    topA,
+    topK,
+    repetitionPenalty,
     settings: decryptedSettings,
   };
 
@@ -292,4 +364,141 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   }
 
   return fullText;
+}
+
+/**
+ * Automatically extracts key events, promises, relationship developments, and secrets
+ * from recent conversation messages to store into episodic session memory.
+ */
+export async function extractMemoriesFromChat(options: {
+  character: Character;
+  userPersona?: UserPersona;
+  chatHistory: ChatMessage[];
+  settings: ApiSettings;
+  signal?: AbortSignal;
+}): Promise<Array<{ content: string; category: MemoryCategory }>> {
+  const { character, userPersona, chatHistory, settings, signal } = options;
+  if (chatHistory.length < 2) return [];
+
+  const provider: ProviderType = character.customProvider || settings.defaultProvider || 'gemini';
+  const model: string =
+    character.customModel ||
+    settings.defaultModel ||
+    (provider === 'gemini' ? 'gemini-3.8-flash' : 'deepseek/deepseek-chat');
+
+  const userName = userPersona?.name || 'User';
+
+  const conversationSample = chatHistory
+    .slice(-25)
+    .map((m) => `${m.role === 'assistant' ? character.name : userName}: ${m.content}`)
+    .join('\n\n');
+
+  const extractionPrompt = `Kamu adalah sistem analisis memori roleplay AI.
+Tugasmu: Analisis percakapan antara "${character.name}" dan "${userName}" di bawah ini.
+Ekstrak 2 sampai 5 peristiwa penting, fakta baru, janji/kesepakatan, rahasia, atau perkembangan hubungan emosional yang terjadi dalam percakapan.
+
+Format Output WAJIB JSON murni (array of objects) tanpa kata pengantar atau penutup apapun:
+[
+  {
+    "content": "Ringkasan peristiwa atau fakta dalam 1-2 kalimat padat",
+    "category": "event"
+  }
+]
+
+Pilihan category yang valid: "event" | "relation" | "fact" | "promise" | "secret".
+
+Percakapan yang dianalisis:
+${conversationSample}`;
+
+  const decryptedSettings: ApiSettings = {
+    ...settings,
+    geminiApiKey: await decryptSensitiveText(settings.geminiApiKey || ''),
+    openRouterApiKey: await decryptSensitiveText(settings.openRouterApiKey || ''),
+    groqApiKey: await decryptSensitiveText(settings.groqApiKey || ''),
+    openaiApiKey: await decryptSensitiveText(settings.openaiApiKey || ''),
+    customApiKey: await decryptSensitiveText(settings.customApiKey || ''),
+  };
+
+  const payload = {
+    provider,
+    model,
+    systemPrompt: 'Kamu adalah asisten analisis memori yang selalu menghasilkan respon valid JSON.',
+    messages: [{ role: 'user', content: extractionPrompt }],
+    temperature: 0.3,
+    maxTokens: 800,
+    settings: decryptedSettings,
+  };
+
+  const res = await fetchWithRetry(
+    '/api/chat',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    },
+    1,
+    1000
+  );
+
+  if (!res.ok) {
+    throw new Error('Gagal menghubungi AI untuk mengekstrak memori.');
+  }
+
+  if (!res.body) {
+    throw new Error('Tidak ada stream body dari server.');
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith('data: ')) continue;
+      const dataStr = trimmed.substring(6);
+      if (dataStr === '[DONE]') continue;
+
+      try {
+        const parsed = JSON.parse(dataStr);
+        let chunkText = '';
+        if (parsed.choices && parsed.choices[0]?.delta?.content) {
+          chunkText = parsed.choices[0].delta.content;
+        } else if (parsed.candidates && parsed.candidates[0]?.content?.parts?.[0]?.text) {
+          chunkText = parsed.candidates[0].content.parts[0].text;
+        }
+        if (chunkText) fullText += chunkText;
+      } catch {}
+    }
+  }
+
+  const jsonMatch = fullText.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) return [];
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((item) => typeof item?.content === 'string' && item.content.trim().length > 0)
+        .map((item) => ({
+          content: item.content.trim(),
+          category: (['event', 'relation', 'fact', 'promise', 'secret'].includes(item.category)
+            ? item.category
+            : 'event') as MemoryCategory,
+        }));
+    }
+  } catch (e) {
+    console.error('Error parsing extracted memories JSON:', e);
+  }
+
+  return [];
 }

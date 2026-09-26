@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Character, UserPersona } from '@/types';
 import { useAppStore } from '@/lib/store';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Compass,
   Download,
@@ -15,9 +16,11 @@ import {
   FileText,
   FileCode,
   Check,
+  Brain,
 } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
 import { db } from '@/lib/db';
+import { getRelationshipTier } from '@/lib/relationship';
 import Link from 'next/link';
 
 interface ChatHeaderProps {
@@ -42,11 +45,28 @@ export function ChatHeader({
   const {
     isScenarioDrawerOpen,
     setIsScenarioDrawerOpen,
+    isMemoryDrawerOpen,
+    setIsMemoryDrawerOpen,
+    isRelationshipDrawerOpen,
+    setIsRelationshipDrawerOpen,
     setIsPersonaModalOpen,
     selectedSessionId,
     settings,
     theme,
   } = useAppStore();
+
+  const session = useLiveQuery(
+    () => (selectedSessionId ? db.chatSessions.get(selectedSessionId) : undefined),
+    [selectedSessionId]
+  );
+  const currentLevel = session?.affinityLevel || 1;
+  const relationshipTier = getRelationshipTier(currentLevel);
+
+  const memories = useLiveQuery(
+    () => (selectedSessionId ? db.sessionMemories.where('sessionId').equals(selectedSessionId).toArray() : []),
+    [selectedSessionId]
+  ) || [];
+  const activeMemoryCount = memories.filter((m) => m.enabled).length;
 
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
@@ -213,6 +233,42 @@ export function ChatHeader({
               <Search className="w-3.5 h-3.5" />
             </button>
           )}
+
+          {/* Relationship Level Pill */}
+          <button
+            onClick={() => setIsRelationshipDrawerOpen(!isRelationshipDrawerOpen)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+              isRelationshipDrawerOpen
+                ? isDark ? 'bg-zinc-800 border-rose-500/50 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-700'
+                : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
+            }`}
+            title={`Tingkatan Hubungan: Lv. ${currentLevel} (${relationshipTier.title})`}
+          >
+            <span className="text-xs">{relationshipTier.emoji}</span>
+            <span className="font-mono text-[11px] text-rose-400 font-bold">Lv.{currentLevel}</span>
+            <span className="hidden sm:inline font-medium">{relationshipTier.title}</span>
+          </button>
+
+          {/* Toggle Memory Drawer */}
+          <button
+            onClick={() => setIsMemoryDrawerOpen(!isMemoryDrawerOpen)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+              isMemoryDrawerOpen
+                ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+            }`}
+            title="Buku Memori Peristiwa Karakter"
+          >
+            <Brain className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden md:inline">Memori</span>
+            {activeMemoryCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                isDark ? 'bg-zinc-800 text-amber-400' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {activeMemoryCount}
+              </span>
+            )}
+          </button>
 
           {/* Toggle Scenario Drawer */}
           <button
