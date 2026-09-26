@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Send, Square, Sparkles, MessageSquareCode, CornerDownLeft } from 'lucide-react';
+import { Send, Square } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (messageText: string) => void;
@@ -15,20 +15,20 @@ const QUICK_ACTIONS = [
   { label: '*terkejut*', text: '*terbelalak kaget*' },
   { label: '*berbisik*', text: '*berbisik pelan ke arahmu*' },
   { label: '*menghela nafas*', text: '*menghela nafas panjang*' },
-  { label: '*menatap lekat*', text: '*menatap matamu dengan lekat*' },
   { label: '(OOC: )', text: '(OOC: ' },
 ];
 
 export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInputProps) {
-  const { isGenerating } = useAppStore();
+  const { isGenerating, theme } = useAppStore();
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto grow textarea
+  const isDark = theme === 'dark';
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
     }
   }, [input]);
 
@@ -73,18 +73,21 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
   };
 
   return (
-    <div className="p-3 md:p-4 glass-panel border-t border-white/10 shrink-0 space-y-2">
+    <div className={`p-3 md:p-4 border-t shrink-0 space-y-2 transition-colors ${
+      isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
+    }`}>
       {/* Quick Action Chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold shrink-0 hidden sm:inline">
-          Aksi Cepat:
-        </span>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
         {QUICK_ACTIONS.map((action, idx) => (
           <button
             key={idx}
             type="button"
             onClick={() => handleInsertQuickAction(action.text)}
-            className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-cyan-300 border border-white/5 hover:border-cyan-500/30 text-[11px] font-mono transition-all cursor-pointer shrink-0"
+            className={`whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer shrink-0 ${
+              isDark
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                : 'bg-zinc-100 border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200'
+            }`}
           >
             {action.label}
           </button>
@@ -92,16 +95,22 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
       </div>
 
       {/* Main Input Box */}
-      <div className="relative flex items-end gap-2 bg-zinc-900/70 rounded-2xl border border-white/10 p-1.5 focus-within:border-cyan-500/50 focus-within:ring-1 focus-within:ring-cyan-500/30 transition-all">
+      <div className={`relative flex items-end gap-2 rounded-xl border p-1.5 transition-colors ${
+        isDark
+          ? 'bg-zinc-900/70 border-zinc-800 focus-within:border-zinc-600'
+          : 'bg-zinc-50 border-zinc-200 focus-within:border-zinc-400'
+      }`}>
         <textarea
           ref={textareaRef}
           rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Tulis dialog atau *tindakan/narasi peranmu*... (Enter untuk kirim, Shift+Enter baris baru)"
+          placeholder="Tulis pesan atau *narasi peran*... (Enter kirim, Shift+Enter baris baru)"
           disabled={disabled}
-          className="flex-1 max-h-44 min-h-[38px] bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 px-3 py-2 resize-none focus:outline-none scrollbar-none"
+          className={`flex-1 max-h-40 min-h-[36px] bg-transparent text-xs sm:text-sm px-2.5 py-1.5 resize-none focus:outline-none scrollbar-none ${
+            isDark ? 'text-zinc-100 placeholder:text-zinc-500' : 'text-zinc-900 placeholder:text-zinc-400'
+          }`}
         />
 
         {/* Send / Stop Button */}
@@ -109,21 +118,25 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
           <button
             onClick={onStopGeneration}
             type="button"
-            className="flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-all shadow-md shadow-rose-500/20 cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shrink-0"
             title="Hentikan pembuatan respon"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
-            <span className="hidden sm:inline">Stop</span>
+            <span>Stop</span>
           </button>
         ) : (
           <button
             onClick={handleSend}
             disabled={!input.trim() || disabled}
             type="button"
-            className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 disabled:opacity-30 disabled:pointer-events-none text-white transition-all shadow-md shadow-cyan-500/20 cursor-pointer shrink-0"
+            className={`flex items-center justify-center w-8 h-8 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0 ${
+              isDark
+                ? 'bg-zinc-100 text-zinc-950 hover:bg-white'
+                : 'bg-zinc-900 text-white hover:bg-zinc-800'
+            }`}
             title="Kirim pesan"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

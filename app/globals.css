@@ -3,12 +3,27 @@
 :root {
   --background: #09090b;
   --foreground: #f4f4f5;
-  --card-bg: rgba(18, 18, 23, 0.75);
+  --card-bg: rgba(18, 18, 23, 0.85);
   --card-border: rgba(255, 255, 255, 0.08);
-  --accent-cyan: #06b6d4;
-  --accent-violet: #8b5cf6;
-  --accent-rose: #f43f5e;
-  --accent-amber: #f59e0b;
+  --input-bg: rgba(24, 24, 27, 0.7);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --accent: #ffffff;
+  --accent-fg: #09090b;
+  --muted: #a1a1aa;
+  --muted-fg: #71717a;
+}
+
+.light {
+  --background: #f8fafc;
+  --foreground: #09090b;
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.12);
+  --accent: #09090b;
+  --accent-fg: #ffffff;
+  --muted: #64748b;
+  --muted-fg: #94a3b8;
 }
 
 body {
@@ -16,86 +31,95 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Glassmorphism utility classes */
+/* Calm Minimalist Panel & Card Utilities */
 .glass-panel {
-  background: rgba(18, 18, 24, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .glass-card {
-  background: rgba(20, 20, 28, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card:hover {
-  background: rgba(26, 26, 38, 0.85);
-  border-color: rgba(6, 182, 212, 0.35);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px -10px rgba(6, 182, 212, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.light .glass-card:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .glass-input {
-  background: rgba(15, 15, 20, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f4f4f5;
-  transition: all 0.2s ease;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--foreground);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .glass-input:focus {
-  border-color: rgba(6, 182, 212, 0.6);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
   outline: none;
 }
 
-/* Roleplay Custom Formatter Styles */
+.light .glass-input:focus {
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Roleplay Text Formatter Styles */
 .rp-action {
-  color: #a5b4fc; /* Soft light indigo/lavender */
+  color: #94a3b8;
   font-style: italic;
   letter-spacing: 0.01em;
 }
 
+.light .rp-action {
+  color: #64748b;
+}
+
 .rp-dialogue {
-  color: #ffffff;
   font-weight: 500;
+  color: var(--foreground);
 }
 
 .rp-ooc {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
+  background: rgba(161, 161, 170, 0.1);
+  border: 1px solid rgba(161, 161, 170, 0.2);
+  color: var(--muted);
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 1px 6px;
   font-size: 0.85em;
   font-family: monospace;
 }
 
-/* Custom Sleek Scrollbar */
+/* Minimal Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(10, 10, 14, 0.3);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(161, 161, 170, 0.2);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(161, 161, 170, 0.4);
 }
 
-/* Animated Cursor for Streaming */
+/* Streaming Indicator */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
@@ -103,29 +127,13 @@ body {
 
 .streaming-cursor {
   display: inline-block;
-  width: 8px;
-  height: 16px;
-  background-color: #06b6d4;
+  width: 6px;
+  height: 15px;
+  background-color: var(--foreground);
   margin-left: 4px;
   vertical-align: middle;
   animation: blink 0.8s infinite;
-  border-radius: 2px;
-}
-
-/* Subtle Shimmer Gradient */
-.shimmer-text {
-  background: linear-gradient(90deg, #c084fc, #38bdf8, #818cf8, #c084fc);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 4s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
+  border-radius: 1px;
 }
 
 .scrollbar-none::-webkit-scrollbar {
@@ -135,4 +143,3 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-

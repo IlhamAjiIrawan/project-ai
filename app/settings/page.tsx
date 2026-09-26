@@ -11,14 +11,10 @@ import {
   Database,
   ExternalLink,
   CheckCircle,
-  AlertCircle,
   Save,
   Download,
   Upload,
   RefreshCw,
-  Sparkles,
-  Bot,
-  SlidersHorizontal,
   Eye,
   EyeOff,
   Play,
@@ -28,15 +24,16 @@ import { downloadJson, readJsonFile } from '@/lib/utils';
 import { PRESET_CHARACTERS, PRESET_PERSONAS } from '@/lib/presets';
 
 export default function SettingsHubPage() {
-  const { settings, updateSettings } = useAppStore();
+  const { settings, updateSettings, theme } = useAppStore();
   const [activeTab, setActiveTab] = useState<'keys' | 'models' | 'tts' | 'data'>('keys');
 
-  // Form local states
   const [form, setForm] = useState<ApiSettings>(settings);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [showKeys, setShowKeys] = useState<{ [key: string]: boolean }>({});
   const backupFileInputRef = useRef<HTMLInputElement>(null);
+
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     setForm(settings);
@@ -56,7 +53,7 @@ export default function SettingsHubPage() {
   const handleSave = async () => {
     await updateSettings(form);
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   const toggleKeyVisibility = (keyName: string) => {
@@ -82,7 +79,6 @@ export default function SettingsHubPage() {
     const messages = await db.chatMessages.toArray();
     const personas = await db.personas.toArray();
 
-    // Sanitize API keys from backup to prevent credential leaks
     const sanitizedSettings: ApiSettings = {
       ...form,
       geminiApiKey: '',
@@ -132,10 +128,10 @@ export default function SettingsHubPage() {
   };
 
   const handleResetDefaults = async () => {
-    if (confirm('Pulihkan karakter & persona default? Karakter yang sudah kamu buat tidak akan dihapus.')) {
+    if (confirm('Pulihkan karakter & persona default? Karakter buatanmu tidak akan dihapus.')) {
       await db.characters.bulkPut(PRESET_CHARACTERS);
       await db.personas.bulkPut(PRESET_PERSONAS);
-      alert('Karakter dan persona default berhasil dimuat ulang.');
+      alert('Data preset bawaan berhasil dimuat ulang.');
     }
   };
 
@@ -157,32 +153,30 @@ export default function SettingsHubPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-7 max-w-5xl mx-auto w-full">
-      {/* Settings Header Banner */}
-      <div className="glass-panel rounded-3xl p-6 md:p-8 border border-white/10 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
-              <span>AI Engine & API Configuration</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-4xl mx-auto w-full">
+      {/* Header Banner */}
+      <div className={`rounded-2xl p-6 border transition-colors ${
+        isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
               Pengaturan & API Hub
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl">
-              Kelola kunci API untuk berbagai penyedia AI, atur parameter respon cerita (temperatur, token), suara pembaca (TTS), dan cadangkan riwayat roleplay.
+            <p className={`text-xs sm:text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              Kelola kunci API, preferensi model, parameter respon cerita, dan cadangan data.
             </p>
           </div>
 
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold text-xs md:text-sm shadow-lg shadow-cyan-500/25 transition-all cursor-pointer self-start md:self-auto"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-colors cursor-pointer self-start md:self-auto ${
+              isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+            }`}
           >
             {saveSuccess ? (
               <>
-                <CheckCircle className="w-4 h-4 text-emerald-950" />
+                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-500" />
                 <span>Tersimpan!</span>
               </>
             ) : (
@@ -195,89 +189,90 @@ export default function SettingsHubPage() {
         </div>
       </div>
 
-      {/* Settings Tabs & Content Container */}
-      <div className="glass-card rounded-3xl p-6 md:p-8 border border-white/10 shadow-xl space-y-6">
+      {/* Tabs Container */}
+      <div className={`rounded-2xl p-5 md:p-6 border space-y-6 transition-colors ${
+        isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+      }`}>
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto scrollbar-none">
+        <div className={`flex items-center gap-1.5 border-b pb-3 overflow-x-auto scrollbar-none ${
+          isDark ? 'border-zinc-800' : 'border-zinc-100'
+        }`}>
           <button
             onClick={() => setActiveTab('keys')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               activeTab === 'keys'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
             }`}
           >
-            <Key className="w-4 h-4" />
-            <span>API Keys & Provider</span>
+            <Key className="w-3.5 h-3.5" />
+            <span>API Keys</span>
           </button>
 
           <button
             onClick={() => setActiveTab('models')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               activeTab === 'models'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
             }`}
           >
-            <Sliders className="w-4 h-4" />
+            <Sliders className="w-3.5 h-3.5" />
             <span>Model & Parameter</span>
           </button>
 
           <button
             onClick={() => setActiveTab('tts')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               activeTab === 'tts'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
             }`}
           >
-            <Volume2 className="w-4 h-4" />
+            <Volume2 className="w-3.5 h-3.5" />
             <span>Suara (TTS)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('data')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               activeTab === 'data'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : isDark ? 'bg-transparent text-zinc-400 border-transparent hover:text-zinc-200' : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-900'
             }`}
           >
-            <Database className="w-4 h-4" />
+            <Database className="w-3.5 h-3.5" />
             <span>Backup Data</span>
           </button>
         </div>
 
         {/* Tab 1: API Keys */}
         {activeTab === 'keys' && (
-          <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300 space-y-1">
-              <p className="font-semibold flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-cyan-400" />
-                Kunci API disimpan secara lokal di browser Anda (IndexedDB) dan tidak dikirim ke server kami.
-              </p>
-              <p className="text-zinc-400">
-                Pilih provider yang Anda inginkan (misal Google Gemini gratis atau OpenRouter) dan masukkan API key di bawah.
-              </p>
+          <div className="space-y-4">
+            <div className={`p-3 rounded-xl border text-xs ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
+            }`}>
+              Kunci API disimpan secara lokal di browser Anda (IndexedDB) dan tidak dikirim ke server pihak ketiga.
             </div>
 
             {/* Google Gemini */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div className={`p-4 rounded-xl border space-y-2.5 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                    G
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Google Gemini API</h4>
-                    <p className="text-[11px] text-zinc-400">Direkomendasikan (Cepat, Cerdas, dan Tersedia Kuota Gratis)</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-xs sm:text-sm">Google Gemini</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded ${isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-200 text-zinc-700'}`}>
+                    Rekomendasi
+                  </span>
                 </div>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
+                  className={`flex items-center gap-1 text-[11px] hover:underline ${
+                    isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
                 >
                   <span>Dapatkan Key</span>
                   <ExternalLink className="w-3 h-3" />
@@ -290,12 +285,14 @@ export default function SettingsHubPage() {
                   value={form.geminiApiKey}
                   onChange={(e) => setForm({ ...form, geminiApiKey: e.target.value })}
                   placeholder="AIzaSy..."
-                  className="w-full pl-3.5 pr-10 py-2 rounded-xl glass-input text-xs font-mono"
+                  className={`w-full pl-3 pr-9 py-2 rounded-lg text-xs font-mono border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => toggleKeyVisibility('gemini')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
                 >
                   {showKeys['gemini'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -303,22 +300,18 @@ export default function SettingsHubPage() {
             </div>
 
             {/* OpenRouter */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div className={`p-4 rounded-xl border space-y-2.5 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">
-                    OR
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">OpenRouter API</h4>
-                    <p className="text-[11px] text-zinc-400">Akses ke Claude 3.5, Llama 3, DeepSeek, Mistral, dll.</p>
-                  </div>
-                </div>
+                <span className="font-semibold text-xs sm:text-sm">OpenRouter API</span>
                 <a
                   href="https://openrouter.ai/keys"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
+                  className={`flex items-center gap-1 text-[11px] hover:underline ${
+                    isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
                 >
                   <span>Dapatkan Key</span>
                   <ExternalLink className="w-3 h-3" />
@@ -331,12 +324,14 @@ export default function SettingsHubPage() {
                   value={form.openRouterApiKey}
                   onChange={(e) => setForm({ ...form, openRouterApiKey: e.target.value })}
                   placeholder="sk-or-v1-..."
-                  className="w-full pl-3.5 pr-10 py-2 rounded-xl glass-input text-xs font-mono"
+                  className={`w-full pl-3 pr-9 py-2 rounded-lg text-xs font-mono border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => toggleKeyVisibility('openrouter')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
                 >
                   {showKeys['openrouter'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -344,22 +339,18 @@ export default function SettingsHubPage() {
             </div>
 
             {/* Groq */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div className={`p-4 rounded-xl border space-y-2.5 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold text-xs">
-                    GQ
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Groq API</h4>
-                    <p className="text-[11px] text-zinc-400">Kecepatan inferensi super instan (LPU Engine)</p>
-                  </div>
-                </div>
+                <span className="font-semibold text-xs sm:text-sm">Groq API</span>
                 <a
                   href="https://console.groq.com/keys"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
+                  className={`flex items-center gap-1 text-[11px] hover:underline ${
+                    isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
                 >
                   <span>Dapatkan Key</span>
                   <ExternalLink className="w-3 h-3" />
@@ -372,12 +363,14 @@ export default function SettingsHubPage() {
                   value={form.groqApiKey}
                   onChange={(e) => setForm({ ...form, groqApiKey: e.target.value })}
                   placeholder="gsk_..."
-                  className="w-full pl-3.5 pr-10 py-2 rounded-xl glass-input text-xs font-mono"
+                  className={`w-full pl-3 pr-9 py-2 rounded-lg text-xs font-mono border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => toggleKeyVisibility('groq')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
                 >
                   {showKeys['groq'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -385,22 +378,18 @@ export default function SettingsHubPage() {
             </div>
 
             {/* OpenAI */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div className={`p-4 rounded-xl border space-y-2.5 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                    OA
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">OpenAI API</h4>
-                    <p className="text-[11px] text-zinc-400">GPT-4o, GPT-4o-mini, GPT-3.5</p>
-                  </div>
-                </div>
+                <span className="font-semibold text-xs sm:text-sm">OpenAI API</span>
                 <a
                   href="https://platform.openai.com/api-keys"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
+                  className={`flex items-center gap-1 text-[11px] hover:underline ${
+                    isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
                 >
                   <span>Dapatkan Key</span>
                   <ExternalLink className="w-3 h-3" />
@@ -413,32 +402,27 @@ export default function SettingsHubPage() {
                   value={form.openaiApiKey}
                   onChange={(e) => setForm({ ...form, openaiApiKey: e.target.value })}
                   placeholder="sk-..."
-                  className="w-full pl-3.5 pr-10 py-2 rounded-xl glass-input text-xs font-mono"
+                  className={`w-full pl-3 pr-9 py-2 rounded-lg text-xs font-mono border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => toggleKeyVisibility('openai')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
                 >
                   {showKeys['openai'] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
 
-            {/* Custom OpenAI-Compatible (Ollama, LM Studio, vLLM) */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                    CP
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">Custom Endpoint (Ollama Cloud / Lokal / LM Studio)</h4>
-                    <p className="text-[11px] text-zinc-400">Kompatibel dengan API format OpenAI</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
+            {/* Custom Endpoint */}
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="font-semibold text-xs sm:text-sm">Custom Endpoint (Ollama / LM Studio)</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
                     onClick={() =>
@@ -449,9 +433,11 @@ export default function SettingsHubPage() {
                         customModelName: form.customModelName || 'gemma4:27b',
                       })
                     }
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-medium transition-all cursor-pointer"
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+                    }`}
                   >
-                    ☁️ Ollama Cloud
+                    Ollama Cloud
                   </button>
                   <button
                     type="button"
@@ -463,9 +449,11 @@ export default function SettingsHubPage() {
                         customModelName: form.customModelName || 'gemma2:27b',
                       })
                     }
-                    className="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[10px] font-medium transition-all cursor-pointer"
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+                    }`}
                   >
-                    💻 Ollama Lokal
+                    Ollama Lokal
                   </button>
                   <button
                     type="button"
@@ -476,69 +464,50 @@ export default function SettingsHubPage() {
                         customApiKey: 'lm-studio',
                       })
                     }
-                    className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] font-medium transition-all cursor-pointer"
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+                    }`}
                   >
-                    Set URL LM Studio
+                    LM Studio
                   </button>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-zinc-800/60 border border-zinc-700/50 text-[11px] space-y-2">
-                <div className="flex gap-2 items-start">
-                  <span className="text-emerald-400 font-bold mt-0.5">☁️</span>
-                  <div>
-                    <p className="font-semibold text-emerald-300">Ollama Cloud (Hosted):</p>
-                    <p className="text-zinc-300">
-                      Base URL: <code className="bg-black/40 px-1 py-0.5 rounded text-emerald-200">https://ollama.com/v1</code> — Butuh{' '}
-                      <strong className="text-amber-300">API Key</strong> dari akun Ollama kamu.{' '}
-                      <a href="https://ollama.com/settings/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Buat API Key di sini →</a>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2 items-start">
-                  <span className="text-cyan-400 font-bold mt-0.5">💻</span>
-                  <div>
-                    <p className="font-semibold text-cyan-300">Ollama Lokal (di PC kamu):</p>
-                    <p className="text-zinc-300">
-                      Base URL: <code className="bg-black/40 px-1 py-0.5 rounded text-cyan-200">http://localhost:11434/v1</code> — API Key: <code className="text-cyan-200">ollama</code> (default, tidak perlu auth).
-                      Pastikan model sudah di-download: <code className="text-cyan-300">ollama run gemma4:12b</code>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">Base URL</label>
+                  <label className="text-[11px] block mb-1 text-zinc-400">Base URL</label>
                   <input
                     type="text"
                     value={form.customBaseUrl}
                     onChange={(e) => setForm({ ...form, customBaseUrl: e.target.value })}
                     placeholder="http://localhost:11434/v1"
-                    className="w-full px-3 py-1.5 rounded-xl glass-input text-xs font-mono"
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-mono border ${
+                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">
-                    API Key{' '}
-                    <span className="text-amber-400 font-semibold">(Wajib untuk Cloud)</span>
-                  </label>
+                  <label className="text-[11px] block mb-1 text-zinc-400">API Key</label>
                   <input
                     type="password"
                     value={form.customApiKey}
                     onChange={(e) => setForm({ ...form, customApiKey: e.target.value })}
-                    placeholder="Ollama Cloud: masukkan API Key | Lokal: ollama"
-                    className="w-full px-3 py-1.5 rounded-xl glass-input text-xs font-mono"
+                    placeholder="ollama / key"
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-mono border ${
+                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">Model Name</label>
+                  <label className="text-[11px] block mb-1 text-zinc-400">Model Name</label>
                   <input
                     type="text"
                     value={form.customModelName}
                     onChange={(e) => setForm({ ...form, customModelName: e.target.value })}
-                    placeholder="gemma2:27b, llama3.2, mistral, dll."
-                    className="w-full px-3 py-1.5 rounded-xl glass-input text-xs font-mono"
+                    placeholder="gemma2:27b, llama3.2"
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-mono border ${
+                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                   />
                 </div>
               </div>
@@ -548,11 +517,11 @@ export default function SettingsHubPage() {
 
         {/* Tab 2: Models & Hyperparameters */}
         {activeTab === 'models' && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Default Provider & Model */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-300">Provider Default</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Provider Utama</label>
                 <select
                   value={form.defaultProvider}
                   onChange={(e) => {
@@ -560,30 +529,34 @@ export default function SettingsHubPage() {
                     const defaultForProv = POPULAR_MODELS.find((m) => m.provider === newProv)?.id || '';
                     setForm({ ...form, defaultProvider: newProv, defaultModel: defaultForProv });
                   }}
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs font-medium cursor-pointer"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 >
-                  <option value="gemini" className="bg-zinc-900 text-white">Google Gemini</option>
-                  <option value="openrouter" className="bg-zinc-900 text-white">OpenRouter</option>
-                  <option value="groq" className="bg-zinc-900 text-white">Groq</option>
-                  <option value="openai" className="bg-zinc-900 text-white">OpenAI</option>
-                  <option value="custom" className="bg-zinc-900 text-white">Custom / Local LLM</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom / Local LLM</option>
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-300">Model Default</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Model Utama</label>
                 <select
                   value={form.defaultModel}
                   onChange={(e) => setForm({ ...form, defaultModel: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl glass-input text-xs font-medium cursor-pointer"
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 >
                   {POPULAR_MODELS.filter((m) => m.provider === form.defaultProvider).map((m) => (
-                    <option key={m.id} value={m.id} className="bg-zinc-900 text-white">
+                    <option key={m.id} value={m.id}>
                       {m.name} ({m.id})
                     </option>
                   ))}
                   {form.defaultProvider === 'custom' && (
-                    <option value={form.customModelName || 'custom'} className="bg-zinc-900 text-white">
+                    <option value={form.customModelName || 'custom'}>
                       {form.customModelName || 'Custom Model'}
                     </option>
                   )}
@@ -593,49 +566,57 @@ export default function SettingsHubPage() {
 
             {/* Hyperparameter Quick Presets */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-300">Preset Gaya Respon Cepat</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <label className="text-xs font-semibold">Preset Gaya Cerita</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => applyParameterPreset('novelist')}
-                  className="p-3 rounded-2xl bg-zinc-900/70 hover:bg-zinc-800 border border-white/5 text-left transition-all cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
                 >
-                  <p className="font-semibold text-xs text-white">Novelist / Story</p>
-                  <p className="text-[10px] text-zinc-400">Deskriptif & kaya emosi</p>
+                  <p className="font-semibold text-xs">Novelist</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => applyParameterPreset('creative')}
-                  className="p-3 rounded-2xl bg-zinc-900/70 hover:bg-zinc-800 border border-white/5 text-left transition-all cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
                 >
-                  <p className="font-semibold text-xs text-white">Kreatif & Bebas</p>
-                  <p className="text-[10px] text-zinc-400">Variatif & tak terduga</p>
+                  <p className="font-semibold text-xs">Kreatif</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & bebas</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => applyParameterPreset('rpg')}
-                  className="p-3 rounded-2xl bg-zinc-900/70 hover:bg-zinc-800 border border-white/5 text-left transition-all cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
                 >
-                  <p className="font-semibold text-xs text-white">RPG Master</p>
-                  <p className="text-[10px] text-zinc-400">Logis & terarah</p>
+                  <p className="font-semibold text-xs">RPG Master</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis & terarah</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => applyParameterPreset('precise')}
-                  className="p-3 rounded-2xl bg-zinc-900/70 hover:bg-zinc-800 border border-white/5 text-left transition-all cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                  }`}
                 >
-                  <p className="font-semibold text-xs text-white">Presisi</p>
-                  <p className="text-[10px] text-zinc-400">Ketat pada prompt</p>
+                  <p className="font-semibold text-xs">Presisi</p>
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
                 </button>
               </div>
             </div>
 
-            {/* Parameter Sliders */}
+            {/* Sliders */}
             <div className="space-y-4 pt-2">
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium text-zinc-300">Temperature (Kreativitas)</span>
-                  <span className="font-mono text-cyan-400">{form.temperature}</span>
+                  <span className="font-medium">Temperature</span>
+                  <span className="font-mono">{form.temperature}</span>
                 </div>
                 <input
                   type="range"
@@ -644,14 +625,14 @@ export default function SettingsHubPage() {
                   step="0.05"
                   value={form.temperature}
                   onChange={(e) => setForm({ ...form, temperature: parseFloat(e.target.value) })}
-                  className="w-full accent-cyan-400 cursor-pointer"
+                  className="w-full cursor-pointer accent-zinc-500"
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium text-zinc-300">Max Tokens (Panjang Balasan Maksimal)</span>
-                  <span className="font-mono text-cyan-400">{form.maxTokens}</span>
+                  <span className="font-medium">Max Tokens</span>
+                  <span className="font-mono">{form.maxTokens}</span>
                 </div>
                 <input
                   type="range"
@@ -660,14 +641,14 @@ export default function SettingsHubPage() {
                   step="100"
                   value={form.maxTokens}
                   onChange={(e) => setForm({ ...form, maxTokens: parseInt(e.target.value) })}
-                  className="w-full accent-cyan-400 cursor-pointer"
+                  className="w-full cursor-pointer accent-zinc-500"
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium text-zinc-300">Top P</span>
-                  <span className="font-mono text-cyan-400">{form.topP}</span>
+                  <span className="font-medium">Top P</span>
+                  <span className="font-mono">{form.topP}</span>
                 </div>
                 <input
                   type="range"
@@ -676,7 +657,7 @@ export default function SettingsHubPage() {
                   step="0.05"
                   value={form.topP}
                   onChange={(e) => setForm({ ...form, topP: parseFloat(e.target.value) })}
-                  className="w-full accent-cyan-400 cursor-pointer"
+                  className="w-full cursor-pointer accent-zinc-500"
                 />
               </div>
             </div>
@@ -685,43 +666,51 @@ export default function SettingsHubPage() {
 
         {/* Tab 3: TTS (Text-to-Speech) */}
         {activeTab === 'tts' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-900/60 border border-white/5">
+          <div className="space-y-5">
+            <div className={`flex items-center justify-between p-4 rounded-xl border ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div>
-                <h4 className="font-bold text-sm text-white">Aktifkan Text-to-Speech (TTS)</h4>
-                <p className="text-xs text-zinc-400">Otomatis membacakan dialog karakter dengan audio browser</p>
+                <h4 className="font-semibold text-xs sm:text-sm">Aktifkan Text-to-Speech (TTS)</h4>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  Membacakan dialog karakter menggunakan Web Speech API browser
+                </p>
               </div>
               <input
                 type="checkbox"
                 checked={form.enableTTS}
                 onChange={(e) => setForm({ ...form, enableTTS: e.target.checked })}
-                className="w-5 h-5 accent-cyan-400 cursor-pointer rounded"
+                className="w-4 h-4 cursor-pointer rounded"
               />
             </div>
 
             {form.enableTTS && (
-              <div className="space-y-4 p-4 rounded-2xl bg-zinc-900/40 border border-white/5">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">Pilih Suara (Web Speech API)</label>
+              <div className={`space-y-4 p-4 rounded-xl border ${
+                isDark ? 'bg-zinc-950/40 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Pilih Suara</label>
                   <select
                     value={form.ttsVoice}
                     onChange={(e) => setForm({ ...form, ttsVoice: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl glass-input text-xs font-medium cursor-pointer"
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
+                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                   >
-                    <option value="">Default Suara Sistem Browser</option>
+                    <option value="">Default Suara Browser</option>
                     {availableVoices.map((v, i) => (
-                      <option key={i} value={v.name} className="bg-zinc-900 text-white">
+                      <option key={i} value={v.name}>
                         {v.name} ({v.lang})
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-zinc-300">Kecepatan Bicara (Rate)</span>
-                      <span className="font-mono text-cyan-400">{form.ttsRate}x</span>
+                      <span className="font-medium">Kecepatan (Rate)</span>
+                      <span className="font-mono">{form.ttsRate}x</span>
                     </div>
                     <input
                       type="range"
@@ -730,14 +719,14 @@ export default function SettingsHubPage() {
                       step="0.1"
                       value={form.ttsRate}
                       onChange={(e) => setForm({ ...form, ttsRate: parseFloat(e.target.value) })}
-                      className="w-full accent-cyan-400 cursor-pointer"
+                      className="w-full cursor-pointer accent-zinc-500"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-zinc-300">Nada Suara (Pitch)</span>
-                      <span className="font-mono text-cyan-400">{form.ttsPitch}</span>
+                      <span className="font-medium">Nada (Pitch)</span>
+                      <span className="font-mono">{form.ttsPitch}</span>
                     </div>
                     <input
                       type="range"
@@ -746,16 +735,18 @@ export default function SettingsHubPage() {
                       step="0.1"
                       value={form.ttsPitch}
                       onChange={(e) => setForm({ ...form, ttsPitch: parseFloat(e.target.value) })}
-                      className="w-full accent-cyan-400 cursor-pointer"
+                      className="w-full cursor-pointer accent-zinc-500"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div>
                   <button
                     type="button"
                     onClick={handleTestVoice}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 border border-violet-500/40 text-violet-300 text-xs font-medium cursor-pointer"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700' : 'bg-white border-zinc-200 text-zinc-800 hover:bg-zinc-100'
+                    }`}
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Uji Coba Suara</span>
@@ -768,32 +759,38 @@ export default function SettingsHubPage() {
 
         {/* Tab 4: Backup & Data */}
         {activeTab === 'data' && (
-          <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+          <div className="space-y-4">
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div>
-                <h4 className="font-bold text-sm text-white">Cadangkan & Pulihkan Semua Data</h4>
-                <p className="text-xs text-zinc-400">
-                  Ekspor seluruh karakter, persona, riwayat chat, dan pengaturan ke satu file JSON cadangan.
+                <h4 className="font-semibold text-xs sm:text-sm">Cadangkan & Pulihkan Data</h4>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  Ekspor seluruh karakter, persona, riwayat chat, dan pengaturan ke file JSON.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleExportAllBackup}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-semibold text-xs cursor-pointer shadow-md shadow-cyan-500/20"
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer ${
+                    isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  }`}
                 >
                   <Download className="w-4 h-4" />
-                  <span>Ekspor Backup Lengkap (.json)</span>
+                  <span>Ekspor Backup (.json)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => backupFileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10 text-xs font-semibold cursor-pointer"
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-medium cursor-pointer ${
+                    isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100'
+                  }`}
                 >
-                  <Upload className="w-4 h-4 text-cyan-400" />
-                  <span>Pulihkan dari Backup JSON</span>
+                  <Upload className="w-4 h-4" />
+                  <span>Pulihkan Backup</span>
                 </button>
                 <input
                   ref={backupFileInputRef}
@@ -805,21 +802,25 @@ export default function SettingsHubPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50/60 border-zinc-200'
+            }`}>
               <div>
-                <h4 className="font-bold text-sm text-white">Muat Ulang Karakter Preset Default</h4>
-                <p className="text-xs text-zinc-400">
-                  Jika Anda kehilangan karakter bawaan atau ingin memperbarui template awal.
+                <h4 className="font-semibold text-xs sm:text-sm">Muat Ulang Preset Bawaan</h4>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  Kembalikan template karakter dan persona bawaan ke awal.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={handleResetDefaults}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-white/10 text-xs font-medium cursor-pointer"
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-medium cursor-pointer ${
+                  isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100'
+                }`}
               >
-                <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
-                <span>Muat Ulang Preset Bawaan</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Muat Ulang Preset</span>
               </button>
             </div>
           </div>

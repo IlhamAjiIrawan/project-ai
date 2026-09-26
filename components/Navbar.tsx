@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
@@ -18,20 +18,21 @@ import {
   ChevronDown,
   Users,
   SlidersHorizontal,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { POPULAR_MODELS } from '@/lib/providers/types';
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const {
-    setIsSettingsOpen,
     setIsCharacterModalOpen,
-    setIsPersonaModalOpen,
     setEditingCharacter,
     selectedPersonaId,
     setSelectedPersonaId,
     settings,
+    theme,
+    toggleTheme,
   } = useAppStore();
 
   const personas = useLiveQuery(() => db.personas.toArray(), []) || [];
@@ -59,40 +60,40 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: Compass },
-    { href: '/chat', label: 'Ruang Chat', icon: MessageSquare },
-    { href: '/characters', label: 'Studio Karakter', icon: Sparkles },
-    { href: '/personas', label: 'Persona Pemain', icon: Users },
-    { href: '/settings', label: 'Pengaturan API', icon: SlidersHorizontal },
+    { href: '/chat', label: 'Chat', icon: MessageSquare },
+    { href: '/characters', label: 'Karakter', icon: Sparkles },
+    { href: '/personas', label: 'Persona', icon: Users },
+    { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
   ];
 
+  const isDark = theme === 'dark';
+
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-3 sm:px-5 py-2.5 flex items-center justify-between">
-      {/* Brand & Mode Switcher */}
-      <div className="flex items-center gap-4">
+    <header className={`sticky top-0 z-40 w-full glass-panel border-b px-4 sm:px-6 py-2.5 flex items-center justify-between transition-colors ${
+      isDark ? 'border-zinc-800/80 bg-zinc-950/80' : 'border-zinc-200 bg-white/80'
+    }`}>
+      {/* Brand & Nav */}
+      <div className="flex items-center gap-6">
         <Link
           href="/"
           className="flex items-center gap-2.5 group text-left cursor-pointer focus:outline-none"
         >
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-violet-500 to-fuchsia-500 p-0.5 shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all">
-            <div className="w-full h-full bg-zinc-950 rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:rotate-12 transition-transform duration-300" />
-            </div>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+            isDark ? 'bg-zinc-800 text-zinc-100 group-hover:bg-zinc-700' : 'bg-zinc-900 text-zinc-50 group-hover:bg-zinc-800'
+          }`}>
+            <Sparkles className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold tracking-tight text-sm sm:text-base bg-gradient-to-r from-cyan-400 via-indigo-300 to-fuchsia-400 bg-clip-text text-transparent">
-                Roleplay AI Hub
-              </span>
-              <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">
-                v2.5
+              <span className="font-semibold tracking-tight text-sm sm:text-base">
+                Roleplay AI
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-zinc-400 hidden lg:block">Multi-Provider AI Story Engine</p>
           </div>
         </Link>
 
         {/* View Switch / Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 ml-2 bg-zinc-900/60 p-1 rounded-xl border border-white/5">
+        <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -100,13 +101,17 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                    ? isDark
+                      ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                      : 'bg-zinc-100 text-zinc-900 font-semibold'
+                    : isDark
+                      ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                      : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-zinc-400'}`} />
+                <Icon className="w-3.5 h-3.5" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -115,59 +120,82 @@ export function Navbar() {
       </div>
 
       {/* Center / Right controls */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2">
+        {/* Dark / Light Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Beralih ke Light Mode' : 'Beralih ke Dark Mode'}
+          className={`p-2 rounded-lg border text-xs transition-colors cursor-pointer ${
+            isDark
+              ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800'
+              : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100'
+          }`}
+        >
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
         {/* Create Character Quick Button */}
         <button
           onClick={() => {
             setEditingCharacter(null);
             setIsCharacterModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white text-xs font-medium shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all cursor-pointer"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+            isDark
+              ? 'bg-zinc-100 text-zinc-950 hover:bg-white'
+              : 'bg-zinc-900 text-white hover:bg-zinc-800'
+          }`}
         >
           <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Buat Karakter</span>
+          <span className="hidden sm:inline">Karakter Baru</span>
         </button>
 
         {/* Persona Switcher Dropdown */}
         <div className="relative">
           <button
             onClick={() => setPersonaDropdownOpen(!personaDropdownOpen)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800/80 border border-white/10 text-xs text-zinc-200 transition-all cursor-pointer"
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
+              isDark
+                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-200 hover:bg-zinc-800'
+                : 'border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50'
+            }`}
             title="Ganti Persona Pemain"
           >
             {activePersona?.avatar ? (
               <img
                 src={activePersona.avatar}
                 alt={activePersona.name}
-                className="w-5 h-5 rounded-full object-cover ring-1 ring-cyan-500/40"
+                className="w-4 h-4 rounded-full object-cover"
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-[10px] font-bold">
-                <User className="w-3 h-3" />
-              </div>
+              <User className="w-3.5 h-3.5 text-zinc-400" />
             )}
-            <span className="max-w-[90px] truncate hidden sm:inline font-medium text-xs">
+            <span className="max-w-[85px] truncate hidden sm:inline font-medium text-xs">
               {activePersona?.name || 'Persona'}
             </span>
             <ChevronDown className="w-3 h-3 text-zinc-400" />
           </button>
 
           {personaDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 glass-panel rounded-2xl p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 border border-white/10">
-              <div className="px-2.5 py-1.5 border-b border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className={`absolute right-0 mt-2 w-56 rounded-xl p-1.5 shadow-xl z-50 border ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+            }`}>
+              <div className={`px-2 py-1.5 border-b flex items-center justify-between ${
+                isDark ? 'border-zinc-800 text-zinc-400' : 'border-zinc-100 text-zinc-500'
+              }`}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider">
                   Persona Pemain
                 </span>
                 <Link
                   href="/personas"
                   onClick={() => setPersonaDropdownOpen(false)}
-                  className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
+                  className="text-[10px] text-zinc-400 hover:text-zinc-100 hover:underline cursor-pointer"
                 >
-                  Kelola Semua
+                  Kelola
                 </Link>
               </div>
 
-              <div className="py-1 space-y-1 max-h-48 overflow-y-auto">
+              <div className="py-1 space-y-0.5 max-h-48 overflow-y-auto">
                 {personas.map((persona) => (
                   <button
                     key={persona.id}
@@ -175,26 +203,25 @@ export function Navbar() {
                       setSelectedPersonaId(persona.id);
                       setPersonaDropdownOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
                       selectedPersonaId === persona.id
-                        ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                        : 'text-zinc-300 hover:bg-white/5'
+                        ? isDark ? 'bg-zinc-800 font-medium' : 'bg-zinc-100 font-medium'
+                        : isDark ? 'hover:bg-zinc-800/60 text-zinc-300' : 'hover:bg-zinc-50 text-zinc-700'
                     }`}
                   >
                     {persona.avatar ? (
                       <img
                         src={persona.avatar}
                         alt={persona.name}
-                        className="w-6 h-6 rounded-full object-cover shrink-0"
+                        className="w-5 h-5 rounded-full object-cover shrink-0"
                       />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0">
-                        <User className="w-3.5 h-3.5" />
+                      <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                        <User className="w-3 h-3 text-zinc-400" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{persona.name}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{persona.bio}</p>
+                      <p className="font-medium truncate text-xs">{persona.name}</p>
                     </div>
                   </button>
                 ))}
@@ -203,25 +230,29 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Model / Provider Indicator with direct link / modal */}
+        {/* Settings / API Key Indicator */}
         <Link
           href="/settings"
-          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
             isAnyKeyConfigured
-              ? 'bg-zinc-900/80 border-white/10 text-zinc-300 hover:border-cyan-500/40 hover:text-cyan-300'
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 animate-pulse'
+              ? isDark
+                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950'
+              : isDark
+                ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-800'
           }`}
-          title="Pengaturan API & Provider"
+          title="Pengaturan API & Model"
         >
           {isAnyKeyConfigured ? (
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <Bot className="w-3.5 h-3.5 text-zinc-400" />
           ) : (
-            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <Key className="w-3.5 h-3.5 text-zinc-400" />
           )}
           <span className="hidden xl:inline font-mono text-[11px]">
             {activeModelPreset ? activeModelPreset.name : settings.defaultModel || settings.defaultProvider}
           </span>
-          <Settings className="w-3.5 h-3.5 text-zinc-400 hover:text-white" />
+          <Settings className="w-3.5 h-3.5 text-zinc-400" />
         </Link>
       </div>
     </header>

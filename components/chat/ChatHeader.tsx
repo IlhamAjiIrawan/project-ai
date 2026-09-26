@@ -45,16 +45,18 @@ export function ChatHeader({
     setIsPersonaModalOpen,
     selectedSessionId,
     settings,
+    theme,
   } = useAppStore();
 
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
 
   const activeModel = character.customModel || settings.defaultModel;
+  const isDark = theme === 'dark';
 
   const showNotification = (msg: string) => {
     setCopiedNotification(msg);
-    setTimeout(() => setCopiedNotification(null), 2500);
+    setTimeout(() => setCopiedNotification(null), 2000);
   };
 
   const handleExportText = async () => {
@@ -76,7 +78,7 @@ export function ChatHeader({
     a.click();
     URL.revokeObjectURL(url);
     setExportDropdownOpen(false);
-    showNotification('Obrolan diekspor sebagai .txt');
+    showNotification('Diekspor sebagai .txt');
   };
 
   const handleExportMarkdown = async () => {
@@ -84,16 +86,16 @@ export function ChatHeader({
     const messages = await db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp');
 
     const mdContent = [
-      `# 🎭 Roleplay: ${character.name}`,
-      `*Tanggal:* ${new Date().toLocaleDateString()} | *Model AI:* \`${activeModel}\``,
-      `*Pemain / User:* ${persona?.name || 'Pemain'}`,
-      `*Skenario:* ${character.scenario || character.tagline || 'Petualangan Interaktif'}`,
+      `# Roleplay: ${character.name}`,
+      `*Tanggal:* ${new Date().toLocaleDateString()} | *Model:* \`${activeModel}\``,
+      `*Pemain:* ${persona?.name || 'Pemain'}`,
+      `*Skenario:* ${character.scenario || character.tagline || 'Petualangan'}`,
       '',
       '---',
       '',
       ...messages.map((m) => {
         const isAI = m.role === 'assistant';
-        const sender = isAI ? `### 🤖 ${character.name}` : `### 👤 ${persona?.name || 'Kamu'}`;
+        const sender = isAI ? `### ${character.name}` : `### ${persona?.name || 'Kamu'}`;
         const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `${sender}  *(${time})*\n\n${m.content}\n`;
       }),
@@ -107,7 +109,7 @@ export function ChatHeader({
     a.click();
     URL.revokeObjectURL(url);
     setExportDropdownOpen(false);
-    showNotification('Obrolan diekspor sebagai .md');
+    showNotification('Diekspor sebagai .md');
   };
 
   const handleExportJson = async () => {
@@ -128,22 +130,26 @@ export function ChatHeader({
       messages,
     };
 
-    downloadJson(`chat_session_${character.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`, exportData);
+    downloadJson(`chat_${character.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`, exportData);
     setExportDropdownOpen(false);
-    showNotification('Obrolan diekspor sebagai .json');
+    showNotification('Diekspor sebagai .json');
   };
 
   return (
-    <div className="glass-panel border-b border-white/10 px-4 py-3 flex flex-col gap-2 shrink-0 relative">
+    <div className={`border-b px-4 py-2.5 flex flex-col gap-2 shrink-0 relative transition-colors ${
+      isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
+    }`}>
       <div className="flex items-center justify-between gap-3">
-        {/* Left: Character Info */}
+        {/* Character Info */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/"
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 md:hidden cursor-pointer shrink-0"
-            title="Kembali ke Dashboard"
+            className={`p-1.5 rounded-lg md:hidden cursor-pointer shrink-0 ${
+              isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+            }`}
+            title="Dashboard"
           >
-            <Compass className="w-5 h-5" />
+            <Compass className="w-4 h-4" />
           </Link>
 
           <div className="relative shrink-0">
@@ -151,118 +157,127 @@ export function ChatHeader({
               <img
                 src={character.avatar}
                 alt={character.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-cyan-500/30"
+                className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold ring-2 ring-cyan-500/30">
-                <Bot className="w-5 h-5" />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-700'
+              }`}>
+                <Bot className="w-4 h-4" />
               </div>
             )}
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-zinc-950" />
           </div>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-sm sm:text-base text-white truncate">{character.name}</h2>
-              <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-cyan-300 font-mono border border-white/5">
+              <h2 className="font-semibold text-xs sm:text-sm truncate">{character.name}</h2>
+              <span className={`hidden sm:inline-flex text-[10px] px-1.5 py-0.2 rounded font-mono border ${
+                isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+              }`}>
                 {activeModel}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 truncate max-w-md hidden sm:block">
+            <p className={`text-[11px] truncate max-w-md hidden sm:block ${
+              isDark ? 'text-zinc-400' : 'text-zinc-500'
+            }`}>
               {character.tagline || character.description}
             </p>
           </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Active Persona Badge */}
           <button
             onClick={() => setIsPersonaModalOpen(true)}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border border-white/10 text-xs cursor-pointer transition-colors"
-            title="Bermain sebagai persona"
+            className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-colors ${
+              isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
+            }`}
+            title="Persona Pemain"
           >
-            <User className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[11px] text-zinc-400">Pemain:</span>
-            <span className="font-semibold text-zinc-200">{persona?.name || 'Persona'}</span>
+            <User className="w-3 h-3 text-zinc-400" />
+            <span className="font-medium">{persona?.name || 'Persona'}</span>
           </button>
 
           {/* Search Toggle */}
           {onToggleSearch && (
             <button
               onClick={onToggleSearch}
-              className={`p-2 rounded-xl border text-xs transition-all cursor-pointer ${
+              className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
                 isSearchOpen
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                  : 'bg-zinc-900/60 text-zinc-400 hover:text-white border-white/10'
+                  ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                  : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
               }`}
-              title="Cari Pesan dalam Sesi"
+              title="Cari Pesan"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-3.5 h-3.5" />
             </button>
           )}
 
           {/* Toggle Scenario Drawer */}
           <button
             onClick={() => setIsScenarioDrawerOpen(!isScenarioDrawerOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
               isScenarioDrawerOpen
-                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                : 'bg-zinc-900/60 text-zinc-400 hover:text-white border-white/10'
+                ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
             }`}
-            title="Lihat Skenario & Lorebook"
+            title="Skenario & Info"
           >
-            <BookOpen className="w-4 h-4 text-purple-400" />
-            <span className="hidden md:inline">Skenario & Info</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Skenario</span>
           </button>
 
           {/* Export Dropdown */}
           <div className="relative">
             <button
               onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-              className="p-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
-              title="Ekspor Percakapan"
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+              }`}
+              title="Ekspor Chat"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5" />
             </button>
 
             {exportDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 glass-panel rounded-2xl p-1.5 shadow-2xl z-50 border border-white/10 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                <div className="px-2.5 py-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-white/5">
-                  Ekspor Riwayat Chat
+              <div className={`absolute right-0 mt-2 w-48 rounded-xl p-1 shadow-xl z-50 border space-y-0.5 ${
+                isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}>
+                <div className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider border-b ${
+                  isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-100 text-zinc-400'
+                }`}>
+                  Ekspor Chat
                 </div>
 
                 <button
                   onClick={handleExportMarkdown}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs text-zinc-200 hover:bg-white/5 transition-colors cursor-pointer"
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                  }`}
                 >
-                  <FileText className="w-4 h-4 text-cyan-400" />
-                  <div>
-                    <p className="font-medium">Markdown (.md)</p>
-                    <p className="text-[10px] text-zinc-400">Format cantik berstruktur</p>
-                  </div>
+                  <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Markdown (.md)</span>
                 </button>
 
                 <button
                   onClick={handleExportText}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs text-zinc-200 hover:bg-white/5 transition-colors cursor-pointer"
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                  }`}
                 >
-                  <FileText className="w-4 h-4 text-zinc-400" />
-                  <div>
-                    <p className="font-medium">Plain Text (.txt)</p>
-                    <p className="text-[10px] text-zinc-400">Naskah teks sederhana</p>
-                  </div>
+                  <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Plain Text (.txt)</span>
                 </button>
 
                 <button
                   onClick={handleExportJson}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs text-zinc-200 hover:bg-white/5 transition-colors cursor-pointer"
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                  }`}
                 >
-                  <FileCode className="w-4 h-4 text-purple-400" />
-                  <div>
-                    <p className="font-medium">JSON Data (.json)</p>
-                    <p className="text-[10px] text-zinc-400">Data raw & swipes</p>
-                  </div>
+                  <FileCode className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>JSON (.json)</span>
                 </button>
               </div>
             )}
@@ -271,49 +286,53 @@ export function ChatHeader({
           {/* Clear Session */}
           <button
             onClick={onClearSession}
-            className="p-2 rounded-xl bg-zinc-900/60 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/10 transition-colors cursor-pointer"
-            title="Hapus & Mulai Ulang Sesi Chat"
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-rose-600 hover:bg-rose-50'
+            }`}
+            title="Mulai Ulang Chat"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Search Input Bar inside Header */}
+      {/* Search Input Bar */}
       {isSearchOpen && (
-        <div className="pt-2 border-t border-white/5 flex items-center gap-2 animate-in slide-in-from-top-1 duration-150">
+        <div className={`pt-2 border-t flex items-center gap-2 ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`}>
           <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchKeyword}
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              placeholder="Cari kata kunci dalam riwayat pesan sesi ini..."
-              className="w-full pl-9 pr-8 py-1.5 rounded-xl glass-input text-xs placeholder:text-zinc-500 focus:outline-none"
+              placeholder="Cari dalam pesan..."
+              className={`w-full pl-8 pr-7 py-1 rounded-lg text-xs border ${
+                isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}
               autoFocus
             />
             {searchKeyword && (
               <button
                 onClick={() => onSearchChange && onSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
           <button
             onClick={onToggleSearch}
-            className="px-2.5 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+            className="px-2 py-1 rounded-lg text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
           >
             Tutup
           </button>
         </div>
       )}
 
-      {/* Export notification toast */}
+      {/* Notification toast */}
       {copiedNotification && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-xl bg-emerald-500/90 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
-          <Check className="w-3.5 h-3.5" />
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs flex items-center gap-1.5 shadow-lg z-50">
+          <Check className="w-3 h-3 text-emerald-400" />
           <span>{copiedNotification}</span>
         </div>
       )}

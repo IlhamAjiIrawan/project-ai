@@ -41,9 +41,18 @@ interface AppState {
   setActiveStreamingMessage: (text: string) => void;
   abortController: AbortController | null;
   setAbortController: (ac: AbortController | null) => void;
+  // Theme
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  // Theme
+  theme: 'dark',
+  setTheme: (theme) => set({ theme }),
+  toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+
   activeView: 'gallery',
   setActiveView: (view) => set({ activeView: view }),
   isSettingsOpen: false,

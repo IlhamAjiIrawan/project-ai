@@ -14,7 +14,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { setSettings } = useAppStore();
+  const { setSettings, theme } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -30,21 +30,33 @@ export function AppShell({ children }: AppShellProps) {
     init();
   }, [setSettings]);
 
+  useEffect(() => {
+    // Apply theme class to document element
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
   if (!isInitialized) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-violet-500 animate-spin flex items-center justify-center p-0.5 shadow-lg shadow-cyan-500/20">
-          <div className="w-full h-full bg-zinc-950 rounded-[14px]" />
-        </div>
-        <p className="text-xs text-zinc-400 font-mono tracking-wider animate-pulse">
-          MEMUAT ROLEPLAY AI HUB...
+      <div className={`min-h-screen flex flex-col items-center justify-center space-y-3 ${theme === 'dark' ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-500 border-t-transparent animate-spin" />
+        <p className="text-xs text-zinc-500 font-mono tracking-wider">
+          MEMUAT APLIKASI...
         </p>
       </div>
     );
   }
 
+  const isDark = theme === 'dark';
+
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
       {/* Top Navbar */}
       <Navbar />
 
@@ -54,7 +66,7 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-zinc-950/40 relative">
+        <main className={`flex-1 flex flex-col min-w-0 overflow-hidden relative ${isDark ? 'bg-zinc-950/40' : 'bg-white/60'}`}>
           {children}
         </main>
       </div>

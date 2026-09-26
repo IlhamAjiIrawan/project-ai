@@ -6,14 +6,11 @@ import { db } from '@/lib/db';
 import { useAppStore } from '@/lib/store';
 import { UserPersona } from '@/types';
 import {
-  Users,
   Plus,
   UserCheck,
   Edit3,
   Trash2,
-  Sparkles,
   Save,
-  CheckCircle,
   X,
 } from 'lucide-react';
 
@@ -27,7 +24,7 @@ const PRESET_USER_AVATARS = [
 ];
 
 export default function PersonasStudioPage() {
-  const { selectedPersonaId, setSelectedPersonaId } = useAppStore();
+  const { selectedPersonaId, setSelectedPersonaId, theme } = useAppStore();
   const personas = useLiveQuery(() => db.personas.toArray(), []) || [];
 
   const [isEditing, setIsEditing] = useState(false);
@@ -37,6 +34,8 @@ export default function PersonasStudioPage() {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
   const [bio, setBio] = useState('');
+
+  const isDark = theme === 'dark';
 
   const startCreate = () => {
     setName('');
@@ -105,46 +104,45 @@ export default function PersonasStudioPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-7 max-w-5xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-5xl mx-auto w-full">
       {/* Studio Header Banner */}
-      <div className="glass-panel rounded-3xl p-6 md:p-8 border border-white/10 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold">
-              <Users className="w-3.5 h-3.5 text-violet-400" />
-              <span>Player Profiles & Roleplay Aliases</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Studio Persona Pemain
+      <div className={`rounded-2xl p-6 border transition-colors ${
+        isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              Persona Pemain
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl">
-              Atur identitas, nama, avatar, dan deskripsi kepribadianmu yang akan dibaca oleh karakter AI saat berinteraksi.
+            <p className={`text-xs sm:text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              Atur identitas, nama, dan deskripsi kepribadianmu yang akan dibaca oleh karakter AI saat roleplay.
             </p>
           </div>
 
           <button
             onClick={startCreate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-semibold text-xs md:text-sm shadow-lg shadow-violet-500/20 transition-all cursor-pointer self-start md:self-auto"
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-colors cursor-pointer self-start md:self-auto ${
+              isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+            }`}
           >
             <Plus className="w-4 h-4" />
-            <span>Tambah Persona Baru</span>
+            <span>Tambah Persona</span>
           </button>
         </div>
       </div>
 
-      {/* Persona Creator / Editor Form Card (When Active) */}
+      {/* Persona Creator / Editor Form Card */}
       {isEditing && (
-        <div className="glass-card rounded-3xl p-6 border border-cyan-500/30 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span>{editingId ? 'Edit Profil Persona' : 'Buat Profil Persona Baru'}</span>
+        <div className={`rounded-2xl p-6 border space-y-5 transition-colors ${
+          isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200 shadow-md'
+        }`}>
+          <div className={`flex items-center justify-between pb-3 border-b ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`}>
+            <h3 className="text-sm font-semibold">
+              {editingId ? 'Edit Profil Persona' : 'Buat Persona Baru'}
             </h3>
             <button
               onClick={() => setIsEditing(false)}
-              className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+              className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -153,24 +151,28 @@ export default function PersonasStudioPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Avatar Selector */}
             <div className="space-y-3">
-              <label className="text-xs font-semibold text-zinc-300">Avatar Profil</label>
-              <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-zinc-900/60 border border-white/5">
+              <label className="text-xs font-semibold">Avatar</label>
+              <div className={`flex flex-col items-center gap-3 p-4 rounded-xl border ${
+                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
                 <img
                   src={avatar || PRESET_USER_AVATARS[0]}
                   alt="Avatar Preview"
-                  className="w-20 h-20 rounded-full object-cover ring-2 ring-cyan-400/40 shadow-md"
+                  className="w-16 h-16 rounded-full object-cover border border-zinc-700"
                 />
 
                 <div className="w-full space-y-2">
-                  <span className="text-[11px] text-zinc-400 block text-center">Pilih Avatar Cepat:</span>
-                  <div className="flex justify-center gap-2 flex-wrap">
+                  <span className={`text-[10px] block text-center ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Pilih Avatar:
+                  </span>
+                  <div className="flex justify-center gap-1.5 flex-wrap">
                     {PRESET_USER_AVATARS.map((avUrl, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => setAvatar(avUrl)}
-                        className={`w-7 h-7 rounded-full overflow-hidden ring-2 transition-all cursor-pointer ${
-                          avatar === avUrl ? 'ring-cyan-400 scale-110' : 'ring-transparent opacity-70 hover:opacity-100'
+                        className={`w-6 h-6 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
+                          avatar === avUrl ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={avUrl} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
@@ -182,59 +184,66 @@ export default function PersonasStudioPage() {
                     type="text"
                     value={avatar}
                     onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="Atau masukkan URL gambar avatar..."
-                    className="w-full px-3 py-1.5 rounded-xl glass-input text-xs mt-2"
+                    placeholder="URL gambar avatar..."
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs border ${
+                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                   />
                 </div>
               </div>
             </div>
 
             {/* Persona Details */}
-            <div className="md:col-span-2 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-300">
+            <div className="md:col-span-2 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">
                   Nama Persona <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Misal: Alex / Detektif Morgan / Ryu"
-                  className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs sm:text-sm font-medium"
+                  placeholder="Misal: Alex / Detektif Morgan"
+                  className={`w-full px-3 py-2 rounded-xl text-xs sm:text-sm border ${
+                    isDark ? 'bg-zinc-950/60 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-300">
-                  Deskripsi / Bio & Sifat Persona (User Prompt)
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">
+                  Deskripsi / Bio Persona
                 </label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  rows={4}
-                  placeholder="Deskripsikan latar belakang, kepribadian, penampilan, atau peranmu dalam roleplay. Informasi ini akan diinfokan ke AI agar memahami siapa kamu..."
-                  className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs sm:text-sm leading-relaxed"
+                  rows={3}
+                  placeholder="Deskripsikan latar belakang atau peranmu. AI akan menyesuaikan dialog berdasarkan info ini..."
+                  className={`w-full px-3 py-2 rounded-xl text-xs sm:text-sm border resize-none ${
+                    isDark ? 'bg-zinc-950/60 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}
                 />
-                <p className="text-[11px] text-zinc-400">
-                  AI akan menyesuaikan respon dan panggilan terhadapmu berdasarkan bio persona ini.
-                </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium cursor-pointer"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
+                    isDark ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
                 >
                   Batal
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-xs font-bold shadow-lg shadow-cyan-500/20 cursor-pointer"
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
+                    isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  }`}
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Simpan Persona</span>
+                  <span>Simpan</span>
                 </button>
               </div>
             </div>
@@ -249,64 +258,76 @@ export default function PersonasStudioPage() {
           return (
             <div
               key={persona.id}
-              className={`glass-card p-5 rounded-3xl border transition-all duration-300 flex flex-col justify-between ${
+              className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between ${
                 isActive
-                  ? 'border-cyan-500/50 bg-zinc-900/90 shadow-xl shadow-cyan-500/10'
-                  : 'border-white/10 hover:border-white/20'
+                  ? isDark
+                    ? 'border-zinc-700 bg-zinc-900'
+                    : 'border-zinc-400 bg-white shadow-sm'
+                  : isDark
+                    ? 'border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-700'
+                    : 'border-zinc-200 bg-white hover:border-zinc-300'
               }`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3.5">
                 <div className="relative shrink-0">
                   <img
                     src={persona.avatar}
                     alt={persona.name}
-                    className="w-14 h-14 rounded-2xl object-cover ring-2 ring-cyan-500/30 shadow-md"
+                    className="w-12 h-12 rounded-xl object-cover"
                   />
                   {persona.isDefault && (
                     <span
                       title="Persona Default"
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-cyan-500 text-zinc-950 flex items-center justify-center ring-2 ring-zinc-950"
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-100 text-zinc-950 dark:bg-white dark:text-zinc-950 flex items-center justify-center text-[9px]"
                     >
-                      <UserCheck className="w-3 h-3" />
+                      <UserCheck className="w-2.5 h-2.5" />
                     </span>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm sm:text-base text-white truncate">{persona.name}</h3>
+                    <h3 className="font-semibold text-sm truncate">{persona.name}</h3>
                     {persona.isDefault && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-medium">
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded border ${
+                        isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                      }`}>
                         Default
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed line-clamp-3">
+                  <p className={`text-xs mt-1 leading-relaxed line-clamp-2 ${
+                    isDark ? 'text-zinc-400' : 'text-zinc-600'
+                  }`}>
                     {persona.bio || 'Tidak ada deskripsi bio.'}
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/5">
+              <div className={`flex items-center justify-between pt-3 mt-3 border-t ${
+                isDark ? 'border-zinc-800/80' : 'border-zinc-100'
+              }`}>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedPersonaId(persona.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
                       isActive
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+                        ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                        : isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'
                     }`}
                   >
-                    {isActive ? 'Sedang Dipakai' : 'Pilih Persona Ini'}
+                    {isActive ? 'Aktif' : 'Pilih'}
                   </button>
 
                   {!persona.isDefault && (
                     <button
                       onClick={() => handleSetDefault(persona.id)}
-                      className="text-[11px] text-zinc-400 hover:text-white cursor-pointer hover:underline"
+                      className={`text-xs cursor-pointer hover:underline ${
+                        isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800'
+                      }`}
                     >
-                      Jadikan Default
+                      Set Default
                     </button>
                   )}
                 </div>
@@ -314,17 +335,17 @@ export default function PersonasStudioPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => startEdit(persona)}
-                    className="p-1.5 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
                     title="Edit Persona"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(persona.id)}
-                    className="p-1.5 rounded-xl hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
                     title="Hapus Persona"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

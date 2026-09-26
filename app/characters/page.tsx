@@ -6,15 +6,10 @@ import { db } from '@/lib/db';
 import { CharacterCard } from '@/components/CharacterCard';
 import { useAppStore } from '@/lib/store';
 import {
-  Sparkles,
   Plus,
   Upload,
   Download,
   Search,
-  BookOpen,
-  Bot,
-  Filter,
-  Layers,
   Compass,
 } from 'lucide-react';
 import { downloadJson, readJsonFile } from '@/lib/utils';
@@ -22,22 +17,24 @@ import { Character } from '@/types';
 
 const CATEGORIES = [
   { id: 'all', label: 'Semua Kategori' },
-  { id: 'scifi', label: 'Sci-Fi / Cyberpunk' },
-  { id: 'fantasy', label: 'High Fantasy' },
-  { id: 'anime', label: 'Anime & Romance' },
-  { id: 'mystery', label: 'Misteri & Detektif' },
-  { id: 'rpg', label: 'RPG Game Master' },
-  { id: 'assistant', label: 'Asisten Khusus' },
+  { id: 'scifi', label: 'Sci-Fi' },
+  { id: 'fantasy', label: 'Fantasy' },
+  { id: 'anime', label: 'Anime' },
+  { id: 'mystery', label: 'Misteri' },
+  { id: 'rpg', label: 'RPG' },
+  { id: 'assistant', label: 'Asisten' },
 ];
 
 export default function CharactersStudioPage() {
-  const { setEditingCharacter, setIsCharacterModalOpen } = useAppStore();
+  const { setEditingCharacter, setIsCharacterModalOpen, theme } = useAppStore();
   const characters = useLiveQuery(() => db.characters.toArray(), []) || [];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'custom' | 'preset'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isDark = theme === 'dark';
 
   const filteredCharacters = characters.filter((char) => {
     const matchesCategory = selectedCategory === 'all' || char.category === selectedCategory;
@@ -62,7 +59,7 @@ export default function CharactersStudioPage() {
     try {
       const parsedData = await readJsonFile<Partial<Character>>(file);
       if (!parsedData.name || !parsedData.greetingMessage) {
-        alert('File karakter tidak memiliki format yang valid (Nama dan Greeting Message wajib ada).');
+        alert('Format file tidak valid (Nama & Greeting Message wajib ada).');
         return;
       }
 
@@ -97,7 +94,7 @@ export default function CharactersStudioPage() {
 
   const handleExportAll = () => {
     if (characters.length === 0) return;
-    downloadJson(`all_characters_backup_${Date.now()}.json`, {
+    downloadJson(`characters_backup_${Date.now()}.json`, {
       version: 1,
       exportedAt: new Date().toISOString(),
       characters,
@@ -108,33 +105,31 @@ export default function CharactersStudioPage() {
   const presetCount = characters.filter((c) => !c.isCustom).length;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-7 max-w-7xl mx-auto w-full">
-      {/* Studio Header Banner */}
-      <div className="glass-panel rounded-3xl p-6 md:p-8 border border-white/10 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Studio & Lorebook Management</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Studio Karakter AI
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+      {/* Header Banner */}
+      <div className={`rounded-2xl p-6 border transition-colors ${
+        isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              Studio Karakter
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl">
-              Buat, kustomisasi prompt kepribadian, lorebook memori dunia, dan format percakapan karakter AI favoritmu.
+            <p className={`text-xs sm:text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              Buat, kustomisasi prompt, lorebook, dan kelola koleksi karakter roleplay.
             </p>
           </div>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
                 setEditingCharacter(null);
                 setIsCharacterModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-semibold text-xs md:text-sm shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+              }`}
             >
               <Plus className="w-4 h-4" />
               <span>Karakter Baru</span>
@@ -142,11 +137,13 @@ export default function CharactersStudioPage() {
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-white/10 text-xs md:text-sm font-medium transition-all cursor-pointer"
-              title="Impor Karakter dari file JSON (SillyTavern/TavernAI format)"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
+              }`}
+              title="Impor Karakter dari file JSON"
             >
-              <Upload className="w-4 h-4 text-cyan-400" />
-              <span className="hidden sm:inline">Impor JSON</span>
+              <Upload className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Impor</span>
             </button>
             <input
               ref={fileInputRef}
@@ -158,78 +155,86 @@ export default function CharactersStudioPage() {
 
             <button
               onClick={handleExportAll}
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-white/10 text-xs md:text-sm font-medium transition-all cursor-pointer"
-              title="Ekspor Semua Karakter sebagai Backup JSON"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
+              }`}
+              title="Ekspor Semua Karakter sebagai JSON"
             >
-              <Download className="w-4 h-4 text-purple-400" />
-              <span className="hidden sm:inline">Ekspor Semua</span>
+              <Download className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Ekspor</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Custom vs Preset Filter Pills */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-900/70 border border-white/5 w-full md:w-auto">
+      <div className="space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Custom vs Preset Pills */}
+          <div className={`flex items-center gap-1 p-1 rounded-xl border ${
+            isDark ? 'bg-zinc-900/60 border-zinc-800/80' : 'bg-zinc-100 border-zinc-200'
+          }`}>
             <button
               onClick={() => setTypeFilter('all')}
-              className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 typeFilter === 'all'
-                  ? 'bg-white/15 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? isDark ? 'bg-zinc-800 text-zinc-100 font-semibold' : 'bg-white text-zinc-900 font-semibold shadow-sm'
+                  : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
               Semua ({characters.length})
             </button>
             <button
               onClick={() => setTypeFilter('custom')}
-              className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 typeFilter === 'custom'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? isDark ? 'bg-zinc-800 text-zinc-100 font-semibold' : 'bg-white text-zinc-900 font-semibold shadow-sm'
+                  : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
               Kustom ({customCount})
             </button>
             <button
               onClick={() => setTypeFilter('preset')}
-              className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 typeFilter === 'preset'
-                  ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? isDark ? 'bg-zinc-800 text-zinc-100 font-semibold' : 'bg-white text-zinc-900 font-semibold shadow-sm'
+                  : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              Preset Bawaan ({presetCount})
+              Preset ({presetCount})
             </button>
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari karakter atau tag..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-xs placeholder:text-zinc-500 focus:outline-none"
+              className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs border transition-colors ${
+                isDark
+                  ? 'bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500'
+                  : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 shadow-sm'
+              }`}
             />
           </div>
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                className={`whitespace-nowrap px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
                   isActive
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-400 hover:text-zinc-200 border border-white/5'
+                    ? isDark ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                    : isDark ? 'bg-zinc-900/60 text-zinc-400 border-zinc-800/80 hover:text-zinc-200' : 'bg-white text-zinc-600 border-zinc-200 hover:text-zinc-900 shadow-sm'
                 }`}
               >
                 {cat.label}
@@ -242,24 +247,28 @@ export default function CharactersStudioPage() {
       {/* Characters Grid */}
       <div>
         {filteredCharacters.length === 0 ? (
-          <div className="text-center py-16 space-y-3 rounded-3xl border border-white/5 bg-zinc-950/40 p-8">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-zinc-900 flex items-center justify-center text-zinc-500">
-              <Compass className="w-6 h-6" />
+          <div className={`text-center py-16 space-y-3 rounded-2xl border p-8 ${
+            isDark ? 'border-zinc-800/80 bg-zinc-900/20 text-zinc-400' : 'border-zinc-200 bg-white/60 text-zinc-600 shadow-sm'
+          }`}>
+            <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center ${
+              isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-500'
+            }`}>
+              <Compass className="w-5 h-5" />
             </div>
-            <p className="text-sm font-medium text-zinc-300">Tidak ada karakter yang sesuai.</p>
+            <p className="text-sm font-medium">Tidak ada karakter yang cocok.</p>
             <button
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
                 setTypeFilter('all');
               }}
-              className="text-xs text-cyan-400 hover:underline cursor-pointer"
+              className="text-xs font-medium hover:underline cursor-pointer"
             >
               Reset Filter
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredCharacters.map((char) => (
               <CharacterCard key={char.id} character={char} />
             ))}

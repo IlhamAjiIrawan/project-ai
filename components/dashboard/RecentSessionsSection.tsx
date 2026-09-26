@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Flame, ChevronRight, Bot } from 'lucide-react';
+import { ChevronRight, MessageSquare } from 'lucide-react';
 import { Character, ChatSession } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
@@ -15,7 +15,8 @@ interface RecentSessionsSectionProps {
 
 export function RecentSessionsSection({ sessions, characters }: RecentSessionsSectionProps) {
   const router = useRouter();
-  const { setSelectedSessionId, setSelectedCharacterId } = useAppStore();
+  const { setSelectedSessionId, setSelectedCharacterId, theme } = useAppStore();
+  const isDark = theme === 'dark';
 
   if (sessions.length === 0) return null;
 
@@ -29,14 +30,16 @@ export function RecentSessionsSection({ sessions, characters }: RecentSessionsSe
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-sm sm:text-base font-bold text-white">Lanjutkan Cerita Terakhir</h2>
+          <MessageSquare className="w-4 h-4 text-zinc-400" />
+          <h2 className="text-sm font-semibold">Lanjutkan Obrolan</h2>
         </div>
         <Link
           href="/chat"
-          className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer font-medium"
+          className={`text-xs flex items-center gap-1 font-medium transition-colors ${
+            isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
+          }`}
         >
-          <span>Lihat Semua Sesi</span>
+          <span>Semua Sesi</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -48,27 +51,35 @@ export function RecentSessionsSection({ sessions, characters }: RecentSessionsSe
             <div
               key={session.id}
               onClick={() => handleResumeSession(session.id, session.characterId)}
-              className="group glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-cyan-500/40 transition-all border border-white/5"
+              className={`p-3 rounded-xl flex items-center gap-3 cursor-pointer border transition-colors ${
+                isDark
+                  ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
+                  : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 shadow-sm'
+              }`}
             >
               {char?.avatar ? (
                 <img
                   src={char.avatar}
                   alt={char?.name || 'Character'}
-                  className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10 shrink-0 group-hover:scale-105 transition-transform"
+                  className="w-10 h-10 rounded-lg object-cover shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold ring-1 ring-white/10 shrink-0">
-                  <Bot className="w-6 h-6" />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                  isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-700'
+                }`}>
+                  {(char?.name || session.title).charAt(0)}
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <p className="font-semibold text-xs text-white truncate group-hover:text-cyan-300">
+                  <p className="font-semibold text-xs truncate">
                     {char?.name || session.title}
                   </p>
-                  <span className="text-[10px] text-zinc-400 shrink-0">{formatDate(session.updatedAt)}</span>
+                  <span className={`text-[10px] shrink-0 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    {formatDate(session.updatedAt)}
+                  </span>
                 </div>
-                <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                <p className={`text-xs truncate mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                   {session.lastMessagePreview || 'Lanjutkan obrolan...'}
                 </p>
               </div>

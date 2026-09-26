@@ -11,7 +11,7 @@ import { ChatInput } from './ChatInput';
 import { ScenarioDrawer } from './ScenarioDrawer';
 import { generateRoleplayResponse } from '@/lib/providers/engine';
 import { ChatMessage, ChatSession } from '@/types';
-import { Sparkles } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
 export function ChatInterface() {
   const {
@@ -26,6 +26,7 @@ export function ChatInterface() {
     abortController,
     setAbortController,
     settings,
+    theme,
   } = useAppStore();
 
   const characters = useLiveQuery(() => db.characters.toArray(), []) || [];
@@ -39,9 +40,10 @@ export function ChatInterface() {
     [selectedSessionId]
   ) || [];
 
-  // Search keyword in chat session
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const isDark = theme === 'dark';
 
   const displayedMessages = useMemo(() => {
     if (!searchKeyword.trim()) return messages;
@@ -53,7 +55,7 @@ export function ChatInterface() {
     });
   }, [messages, searchKeyword]);
 
-  // If no session exists for the selected character, create one
+  // Ensure session exists
   useEffect(() => {
     async function ensureSession() {
       if (!character) return;
@@ -67,7 +69,7 @@ export function ChatInterface() {
             id: newSessionId,
             characterId: character.id,
             personaId: persona?.id,
-            title: `Roleplay: ${character.name}`,
+            title: `${character.name}`,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             lastMessagePreview: character.greetingMessage.substring(0, 60) + '...',
@@ -91,11 +93,13 @@ export function ChatInterface() {
   if (!character) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <Sparkles className="w-12 h-12 text-cyan-400 animate-bounce" />
-        <h3 className="text-lg font-bold text-white">Pilih Karakter untuk Memulai Roleplay</h3>
+        <Bot className="w-10 h-10 text-zinc-400" />
+        <h3 className="text-base font-semibold">Pilih Karakter untuk Memulai Chat</h3>
         <Link
           href="/"
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-cyan-500/20"
+          className={`px-4 py-2 rounded-xl text-xs font-medium transition-colors ${
+            isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+          }`}
         >
           Buka Galeri Karakter
         </Link>
@@ -107,7 +111,6 @@ export function ChatInterface() {
   const handleSendMessage = async (text: string) => {
     if (!selectedSessionId || !text.trim() || isGenerating) return;
 
-    // Check if at least one API key is set
     const provider = character.customProvider || settings.defaultProvider;
     const isKeySet =
       (provider === 'gemini' && settings.geminiApiKey) ||
@@ -118,7 +121,7 @@ export function ChatInterface() {
 
     if (!isKeySet) {
       setIsSettingsOpen(true);
-      alert(`Mohon masukkan API Key untuk provider ${provider.toUpperCase()} di menu Pengaturan terlebih dahulu.`);
+      alert(`Mohon masukkan API Key untuk provider ${provider.toUpperCase()} di Pengaturan.`);
       return;
     }
 
@@ -131,10 +134,8 @@ export function ChatInterface() {
       timestamp: Date.now(),
     };
 
-    // Add user message to DB
     await db.chatMessages.put(userMessage);
 
-    // Auto-Title Session if first user message
     const userMessageCount = messages.filter((m) => m.role === 'user').length;
     const sessionTitleUpdate: Partial<ChatSession> = {
       updatedAt: Date.now(),
@@ -147,7 +148,7 @@ export function ChatInterface() {
 
     await db.chatSessions.update(selectedSessionId, sessionTitleUpdate);
 
-    // Start Streaming Generation
+    // Start Streaming
     const ac = new AbortController();
     setAbortController(ac);
     setIsGenerating(true);
@@ -170,7 +171,6 @@ export function ChatInterface() {
         signal: ac.signal,
       });
 
-      // Save assistant message to DB
       const assistantMessageId = `msg_ai_${Date.now()}`;
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
@@ -201,14 +201,12 @@ export function ChatInterface() {
     }
   };
 
-  // Handle Reroll / Swipe Alternative Generation
   const handleReroll = async (messageId: string) => {
     if (!selectedSessionId || isGenerating) return;
 
     const targetMsg = await db.chatMessages.get(messageId);
     if (!targetMsg || targetMsg.role !== 'assistant') return;
 
-    // Get messages preceding this message
     const allMessages = await db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp');
     const targetIdx = allMessages.findIndex((m) => m.id === messageId);
     const precedingHistory = targetIdx > 0 ? allMessages.slice(0, targetIdx) : [];
@@ -288,9 +286,8 @@ export function ChatInterface() {
 
   const handleClearSession = async () => {
     if (!selectedSessionId) return;
-    if (confirm('Mulai ulang sesi ini dan hapus semua pesan obrolan saat ini?')) {
+    if (confirm('Mulai ulang sesi ini dan hapus riwayat obrolan?')) {
       await db.chatMessages.where('sessionId').equals(selectedSessionId).delete();
-      // Add initial greeting back
       await db.chatMessages.put({
         id: `msg_${Date.now()}`,
         sessionId: selectedSessionId,
@@ -303,8 +300,10 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-57px)] relative overflow-hidden bg-zinc-950">
-      {/* Top Header with Multi-format Export & Search */}
+    <div className={`flex-1 flex flex-col h-[calc(100vh-53px)] relative overflow-hidden transition-colors ${
+      isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'
+    }`}>
+      {/* Top Header */}
       <ChatHeader
         character={character}
         persona={persona}
