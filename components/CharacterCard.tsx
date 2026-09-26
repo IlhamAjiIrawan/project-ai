@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Character, ChatSession } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { MessageSquare, Edit3, Trash2, Download, Sparkles } from 'lucide-react';
+import { MessageSquare, Edit3, Trash2, Download, Sparkles, Bot } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
 
 interface CharacterCardProps {
@@ -105,12 +105,19 @@ export function CharacterCard({ character }: CharacterCardProps) {
       className="glass-card group relative flex flex-col rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-cyan-500/40 transition-all duration-300 shadow-md hover:shadow-cyan-500/15"
     >
       {/* Top Banner Image with Gradient */}
-      <div className="relative h-44 w-full overflow-hidden bg-zinc-900">
-        <img
-          src={character.avatar}
-          alt={character.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+      <div className="relative h-44 w-full overflow-hidden bg-zinc-900 flex items-center justify-center">
+        {character.avatar ? (
+          <img
+            src={character.avatar}
+            alt={character.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/30 to-cyan-900/30 text-zinc-500">
+            <Bot className="w-12 h-12 text-cyan-400/50 mb-1" />
+            <span className="text-xs font-mono text-zinc-400 font-bold">{character.name}</span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent" />
 
         {/* Category Badge */}

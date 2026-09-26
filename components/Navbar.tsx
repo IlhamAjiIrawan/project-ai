@@ -181,11 +181,17 @@ export function Navbar() {
                         : 'text-zinc-300 hover:bg-white/5'
                     }`}
                   >
-                    <img
-                      src={persona.avatar}
-                      alt={persona.name}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
+                    {persona.avatar ? (
+                      <img
+                        src={persona.avatar}
+                        alt={persona.name}
+                        className="w-6 h-6 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{persona.name}</p>
                       <p className="text-[10px] text-zinc-400 truncate">{persona.bio}</p>

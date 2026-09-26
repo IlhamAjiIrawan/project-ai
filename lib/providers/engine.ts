@@ -10,6 +10,58 @@ export interface GenerateRoleplayOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Approximate token estimation heuristic (~4 chars per token for multilingual text).
+ */
+export function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Builds smart context window from chat history within a specified token budget.
+ * - Always preserves the initial anchor message (greeting/scenario setup) if available.
+ * - Fills the remainder of the token budget with the most recent messages.
+ */
+export function buildOptimizedHistory(
+  chatHistory: ChatMessage[],
+  maxHistoryTokens: number = 6000
+): Array<{ role: 'user' | 'assistant'; content: string }> {
+  if (chatHistory.length === 0) return [];
+
+  const formattedAll = chatHistory.map((msg) => ({
+    role: msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+    content: msg.content,
+  }));
+
+  if (formattedAll.length <= 1) return formattedAll;
+
+  // Preserve initial greeting / scenario intro message as permanent anchor
+  const firstMsg = formattedAll[0];
+  const firstMsgTokens = estimateTokens(firstMsg.content);
+
+  let currentTokens = firstMsgTokens;
+  const selectedRecent: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+  // Iterate backwards from most recent message
+  for (let i = formattedAll.length - 1; i >= 1; i--) {
+    const msg = formattedAll[i];
+    const tokens = estimateTokens(msg.content);
+    if (currentTokens + tokens > maxHistoryTokens) {
+      break;
+    }
+    currentTokens += tokens;
+    selectedRecent.unshift(msg);
+  }
+
+  // Ensure first message is retained at beginning
+  if (selectedRecent.length === 0 || selectedRecent[0] !== firstMsg) {
+    return [firstMsg, ...selectedRecent];
+  }
+
+  return selectedRecent;
+}
+
 export function constructRoleplaySystemPrompt(
   character: Character,
   userPersona?: UserPersona,
@@ -70,6 +122,50 @@ ${exampleDialogueText}
 5. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.`.trim();
 }
 
+/**
+ * Fetch wrapper with exponential backoff retry for transient network / rate-limit failures (429, 502, 503)
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = 2,
+  baseDelayMs: number = 1000
+): Promise<Response> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (options.signal?.aborted) {
+      throw new Error('Permintaan dibatalkan oleh pengguna.');
+    }
+
+    try {
+      const response = await fetch(url, options);
+
+      // Retry on transient status (429 Too Many Requests, 502/503/504 Bad Gateway or Unavailable)
+      if ((response.status === 429 || response.status >= 502) && attempt < maxRetries) {
+        const retryAfterHeader = response.headers.get('Retry-After');
+        const delay = retryAfterHeader
+          ? parseInt(retryAfterHeader, 10) * 1000
+          : baseDelayMs * Math.pow(2, attempt);
+
+        await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 4000)));
+        continue;
+      }
+
+      return response;
+    } catch (err: unknown) {
+      lastError = err;
+      if (options.signal?.aborted) throw err;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * Math.pow(2, attempt)));
+        continue;
+      }
+    }
+  }
+
+  throw (lastError instanceof Error ? lastError : new Error('Gagal menghubungi server setelah beberapa percobaan.'));
+}
+
 export async function generateRoleplayResponse(options: GenerateRoleplayOptions): Promise<string> {
   const { character, userPersona, chatHistory, newUserMessage, settings, onChunk, signal } = options;
 
@@ -87,11 +183,8 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   // Construct System Prompt
   const systemPrompt = constructRoleplaySystemPrompt(character, userPersona, recentText);
 
-  // Format message history (sliding window up to last 20 messages for deep context)
-  const historyForLLM = chatHistory.slice(-20).map((msg) => ({
-    role: msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-    content: msg.content,
-  }));
+  // Format message history with smart token-budget context window
+  const historyForLLM = buildOptimizedHistory(chatHistory, 6000);
 
   // Append current user message if provided
   if (newUserMessage) {
@@ -116,14 +209,19 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     settings,
   };
 
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithRetry(
+    '/api/chat',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal,
     },
-    body: JSON.stringify(payload),
-    signal,
-  });
+    2,
+    1000
+  );
 
   if (!response.ok) {
     let errorMsg = '';

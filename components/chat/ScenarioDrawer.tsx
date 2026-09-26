@@ -36,11 +36,17 @@ export function ScenarioDrawer({ character, persona }: ScenarioDrawerProps) {
         {/* Character Card Info */}
         <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
           <div className="flex items-center gap-3">
-            <img
-              src={character.avatar}
-              alt={character.name}
-              className="w-12 h-12 rounded-xl object-cover ring-1 ring-purple-500/40"
-            />
+            {character.avatar ? (
+              <img
+                src={character.avatar}
+                alt={character.name}
+                className="w-12 h-12 rounded-xl object-cover ring-1 ring-purple-500/40 shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm ring-1 ring-purple-500/40 shrink-0">
+                <Bot className="w-6 h-6" />
+              </div>
+            )}
             <div className="min-w-0">
               <h4 className="font-bold text-sm text-white truncate">{character.name}</h4>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">

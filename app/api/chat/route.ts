@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiSettings, ProviderType } from '@/types';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const VALID_PROVIDERS: ProviderType[] = ['gemini', 'openrouter', 'groq', 'openai', 'custom'];
+const MAX_PAYLOAD_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_SYSTEM_PROMPT_LENGTH = 60000;
+const MAX_MESSAGES_COUNT = 100;
+const MAX_MESSAGE_CONTENT_LENGTH = 32000;
 
 interface ChatRequestBody {
   provider: ProviderType;
@@ -17,23 +24,110 @@ interface ChatRequestBody {
 
 export async function POST(req: NextRequest) {
   try {
-    const body: ChatRequestBody = await req.json();
+    // 1. Rate Limiting Check (30 requests per minute per IP)
+    const clientIp = getClientIp(req);
+    const rateLimit = checkRateLimit(clientIp, { windowMs: 60000, maxRequests: 30 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak permintaan (Rate limit tercapai). Silakan tunggu ${rateLimit.retryAfterSeconds} detik sebelum mengirim lagi.`,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfterSeconds),
+            'X-RateLimit-Limit': String(rateLimit.limit),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(rateLimit.resetTime),
+          },
+        }
+      );
+    }
+
+    // 2. Content-Length Header Check
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_SIZE) {
+      return NextResponse.json(
+        { error: 'Ukuran data permintaan terlalu besar (maksimal 2MB).' },
+        { status: 413 }
+      );
+    }
+
+    // 3. Body Parsing & Structural Validation
+    let body: ChatRequestBody;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Payload JSON tidak valid.' }, { status: 400 });
+    }
+
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Format permintaan tidak valid.' }, { status: 400 });
+    }
+
     const {
       provider = 'gemini',
       model,
-      systemPrompt,
-      messages,
+      systemPrompt = '',
+      messages = [],
       temperature = 0.8,
       maxTokens = 1000,
       topP = 0.95,
       settings,
     } = body;
 
+    // Validate provider
+    if (!VALID_PROVIDERS.includes(provider)) {
+      return NextResponse.json({ error: `Provider "${provider}" tidak didukung.` }, { status: 400 });
+    }
+
+    // Validate settings
+    if (!settings || typeof settings !== 'object') {
+      return NextResponse.json({ error: 'Konfigurasi pengaturan API tidak ditemukan.' }, { status: 400 });
+    }
+
+    // Validate messages
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: 'Daftar pesan percakapan tidak boleh kosong.' }, { status: 400 });
+    }
+    if (messages.length > MAX_MESSAGES_COUNT) {
+      return NextResponse.json(
+        { error: `Jumlah riwayat pesan melebihi batas (maksimal ${MAX_MESSAGES_COUNT} pesan).` },
+        { status: 400 }
+      );
+    }
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg || typeof msg !== 'object' || typeof msg.content !== 'string') {
+        return NextResponse.json({ error: `Pesan ke-${i + 1} memiliki format tidak valid.` }, { status: 400 });
+      }
+      if (msg.content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+        return NextResponse.json(
+          { error: `Pesan ke-${i + 1} terlalu panjang (maksimal ${MAX_MESSAGE_CONTENT_LENGTH} karakter).` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate systemPrompt length
+    if (typeof systemPrompt === 'string' && systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH) {
+      return NextResponse.json(
+        { error: `System prompt terlalu panjang (maksimal ${MAX_SYSTEM_PROMPT_LENGTH} karakter).` },
+        { status: 400 }
+      );
+    }
+
+    // Clamp parameters
+    const safeTemperature = typeof temperature === 'number' ? Math.max(0, Math.min(2.0, temperature)) : 0.8;
+    const safeMaxTokens = typeof maxTokens === 'number' ? Math.max(1, Math.min(8192, Math.floor(maxTokens))) : 1000;
+    const safeTopP = typeof topP === 'number' ? Math.max(0, Math.min(1.0, topP)) : 0.95;
+
     // Validate and dispatch to appropriate provider
     if (provider === 'gemini') {
-      return await handleGemini(systemPrompt, messages, model, temperature, maxTokens, topP, settings);
+      return await handleGemini(systemPrompt, messages, model, safeTemperature, safeMaxTokens, safeTopP, settings);
     } else if (provider === 'openrouter') {
-      return await handleOpenRouter(systemPrompt, messages, model, temperature, maxTokens, topP, settings);
+      return await handleOpenRouter(systemPrompt, messages, model, safeTemperature, safeMaxTokens, safeTopP, settings);
     } else if (provider === 'groq') {
       return await handleOpenAICompatible(
         'https://api.groq.com/openai/v1/chat/completions',
@@ -41,9 +135,9 @@ export async function POST(req: NextRequest) {
         model || 'llama-3.3-70b-versatile',
         systemPrompt,
         messages,
-        temperature,
-        maxTokens,
-        topP,
+        safeTemperature,
+        safeMaxTokens,
+        safeTopP,
         'Groq'
       );
     } else if (provider === 'openai') {
@@ -53,14 +147,22 @@ export async function POST(req: NextRequest) {
         model || 'gpt-4o-mini',
         systemPrompt,
         messages,
-        temperature,
-        maxTokens,
-        topP,
+        safeTemperature,
+        safeMaxTokens,
+        safeTopP,
         'OpenAI'
       );
     } else if (provider === 'custom') {
-      let rawBaseUrl = settings.customBaseUrl?.trim() || 'http://localhost:11434/v1';
+      const rawBaseUrl = settings.customBaseUrl?.trim() || 'http://localhost:11434/v1';
       
+      // Basic SSRF & protocol validation
+      if (!rawBaseUrl.startsWith('http://') && !rawBaseUrl.startsWith('https://')) {
+        return NextResponse.json(
+          { error: 'Custom Base URL harus menggunakan protokol http:// atau https://' },
+          { status: 400 }
+        );
+      }
+
       // Helpful URL fix & validation for Ollama
       if (rawBaseUrl.includes('ollama.com')) {
         return NextResponse.json(
@@ -86,19 +188,19 @@ export async function POST(req: NextRequest) {
         customModel,
         systemPrompt,
         messages,
-        temperature,
-        maxTokens,
-        topP,
-        'Custom/Ollama',
-        rawBaseUrl
+        safeTemperature,
+        safeMaxTokens,
+        safeTopP,
+        'Custom/Ollama'
       );
     } else {
       return NextResponse.json({ error: `Provider "${provider}" tidak didukung.` }, { status: 400 });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses permintaan AI.';
     console.error('Chat API Route Error:', err);
     return NextResponse.json(
-      { error: err.message || 'Terjadi kesalahan saat memproses permintaan AI.' },
+      { error: errorMsg },
       { status: 500 }
     );
   }
@@ -258,8 +360,7 @@ async function handleOpenAICompatible(
   temperature: number,
   maxTokens: number,
   topP: number,
-  providerLabel: string,
-  originalBaseUrl?: string
+  providerLabel: string
 ) {
   const formattedMessages: Array<{ role: string; content: string }> = [];
   if (systemPrompt) {
@@ -290,7 +391,8 @@ async function handleOpenAICompatible(
         stream: true,
       }),
     });
-  } catch (networkErr: any) {
+  } catch (networkErr: unknown) {
+    const errorMsg = networkErr instanceof Error ? networkErr.message : String(networkErr);
     if (providerLabel === 'Custom/Ollama') {
       return NextResponse.json(
         {
@@ -300,7 +402,7 @@ async function handleOpenAICompatible(
       );
     }
     return NextResponse.json(
-      { error: `Gagal menghubungi server ${providerLabel}: ${networkErr.message}` },
+      { error: `Gagal menghubungi server ${providerLabel}: ${errorMsg}` },
       { status: 502 }
     );
   }

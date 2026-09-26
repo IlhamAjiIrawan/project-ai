@@ -36,6 +36,8 @@ export class RoleplayDatabase extends Dexie {
 
   constructor() {
     super('RoleplayAIEngineDB');
+
+    // Version 1 (Initial baseline)
     this.version(1).stores({
       characters: 'id, name, category, isCustom, createdAt, updatedAt',
       chatSessions: 'id, characterId, personaId, updatedAt, createdAt',
@@ -43,6 +45,23 @@ export class RoleplayDatabase extends Dexie {
       personas: 'id, name, isDefault, createdAt',
       settings: 'id',
     });
+
+    // Version 2 (Optimized compound index [sessionId+timestamp] & schema migration)
+    this.version(2)
+      .stores({
+        characters: 'id, name, category, isCustom, createdAt, updatedAt',
+        chatSessions: 'id, characterId, personaId, updatedAt, createdAt',
+        chatMessages: 'id, sessionId, role, timestamp, [sessionId+timestamp]',
+        personas: 'id, name, isDefault, createdAt',
+        settings: 'id',
+      })
+      .upgrade(async (tx) => {
+        // Ensure legacy records have valid default shapes
+        await tx.table('characters').toCollection().modify((char) => {
+          if (!char.tags) char.tags = [];
+          if (char.isCustom === undefined) char.isCustom = false;
+        });
+      });
   }
 }
 
@@ -70,12 +89,16 @@ export async function seedDatabaseIfEmpty() {
 
       const settingsCount = await db.settings.count();
       if (settingsCount === 0) {
-        // Check if localStorage has stored API keys from previous session
+        // Check if localStorage has legacy stored API keys from previous session
         let existingKeys: Partial<ApiSettings> = {};
         if (typeof window !== 'undefined') {
           try {
             const stored = localStorage.getItem('roleplay_api_settings');
-            if (stored) existingKeys = JSON.parse(stored);
+            if (stored) {
+              existingKeys = JSON.parse(stored);
+              // Immediately remove legacy plaintext API keys from localStorage for security
+              localStorage.removeItem('roleplay_api_settings');
+            }
           } catch {}
         }
         await db.settings.put({
@@ -84,6 +107,12 @@ export async function seedDatabaseIfEmpty() {
           ...existingKeys,
         });
       } else {
+        // Clean up legacy localStorage if it still exists
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('roleplay_api_settings');
+          } catch {}
+        }
         // Auto-upgrade legacy deprecated model names if stored
         const currentStored = await db.settings.get('global');
         if (currentStored && currentStored.defaultModel === 'gemini-2.5-flash') {

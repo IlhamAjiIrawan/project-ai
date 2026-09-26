@@ -185,13 +185,17 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   key={char.id}
                   onClick={() => handleStartNewChat(char.id)}
                   title={`Chat dengan ${char.name}`}
-                  className="group relative rounded-xl overflow-hidden aspect-square border border-white/10 hover:border-cyan-400 transition-all cursor-pointer"
+                  className="group relative rounded-xl overflow-hidden aspect-square border border-white/10 hover:border-cyan-400 transition-all cursor-pointer bg-zinc-900 flex items-center justify-center"
                 >
-                  <img
-                    src={char.avatar}
-                    alt={char.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
+                  {char.avatar ? (
+                    <img
+                      src={char.avatar}
+                      alt={char.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  ) : (
+                    <Flame className="w-4 h-4 text-cyan-400" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-0.5">
                     <span className="text-[8px] text-white truncate font-medium">{char.name.split(' ')[0]}</span>
                   </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useAppStore } from '@/lib/store';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
@@ -10,7 +11,7 @@ import { ChatInput } from './ChatInput';
 import { ScenarioDrawer } from './ScenarioDrawer';
 import { generateRoleplayResponse } from '@/lib/providers/engine';
 import { ChatMessage, ChatSession } from '@/types';
-import { Compass, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export function ChatInterface() {
   const {
@@ -18,11 +19,9 @@ export function ChatInterface() {
     selectedSessionId,
     setSelectedSessionId,
     selectedPersonaId,
-    setActiveView,
     setIsSettingsOpen,
     isGenerating,
     setIsGenerating,
-    activeStreamingMessage,
     setActiveStreamingMessage,
     abortController,
     setAbortController,
@@ -39,6 +38,20 @@ export function ChatInterface() {
     () => (selectedSessionId ? db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp') : []),
     [selectedSessionId]
   ) || [];
+
+  // Search keyword in chat session
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const displayedMessages = useMemo(() => {
+    if (!searchKeyword.trim()) return messages;
+    const q = searchKeyword.toLowerCase().trim();
+    return messages.filter((m) => {
+      const matchContent = m.content.toLowerCase().includes(q);
+      const matchSwipes = m.swipes?.some((s) => s.toLowerCase().includes(q));
+      return matchContent || matchSwipes;
+    });
+  }, [messages, searchKeyword]);
 
   // If no session exists for the selected character, create one
   useEffect(() => {
@@ -80,12 +93,12 @@ export function ChatInterface() {
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
         <Sparkles className="w-12 h-12 text-cyan-400 animate-bounce" />
         <h3 className="text-lg font-bold text-white">Pilih Karakter untuk Memulai Roleplay</h3>
-        <a
+        <Link
           href="/"
           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-cyan-500/20"
         >
           Buka Galeri Karakter
-        </a>
+        </Link>
       </div>
     );
   }
@@ -120,10 +133,19 @@ export function ChatInterface() {
 
     // Add user message to DB
     await db.chatMessages.put(userMessage);
-    await db.chatSessions.update(selectedSessionId, {
+
+    // Auto-Title Session if first user message
+    const userMessageCount = messages.filter((m) => m.role === 'user').length;
+    const sessionTitleUpdate: Partial<ChatSession> = {
       updatedAt: Date.now(),
       lastMessagePreview: text.substring(0, 60),
-    });
+    };
+    if (userMessageCount === 0) {
+      const snippet = text.length > 30 ? text.substring(0, 28).trim() + '...' : text;
+      sessionTitleUpdate.title = `${character.name} - ${snippet}`;
+    }
+
+    await db.chatSessions.update(selectedSessionId, sessionTitleUpdate);
 
     // Start Streaming Generation
     const ac = new AbortController();
@@ -167,9 +189,10 @@ export function ChatInterface() {
         updatedAt: Date.now(),
         lastMessagePreview: finalReply.substring(0, 60),
       });
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        alert(`Gagal menghasilkan balasan: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error?.name !== 'AbortError') {
+        alert(`Gagal menghasilkan balasan: ${error?.message || 'Terjadi kesalahan'}`);
       }
     } finally {
       setIsGenerating(false);
@@ -216,9 +239,10 @@ export function ChatInterface() {
         swipes: updatedSwipes,
         currentSwipeIndex: updatedSwipes.length - 1,
       });
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        alert(`Gagal reroll balasan: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error?.name !== 'AbortError') {
+        alert(`Gagal reroll balasan: ${error?.message || 'Terjadi kesalahan'}`);
       }
     } finally {
       setIsGenerating(false);
@@ -280,12 +304,20 @@ export function ChatInterface() {
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-57px)] relative overflow-hidden bg-zinc-950">
-      {/* Top Header */}
-      <ChatHeader character={character} persona={persona} onClearSession={handleClearSession} />
+      {/* Top Header with Multi-format Export & Search */}
+      <ChatHeader
+        character={character}
+        persona={persona}
+        onClearSession={handleClearSession}
+        searchKeyword={searchKeyword}
+        onSearchChange={setSearchKeyword}
+        isSearchOpen={isSearchOpen}
+        onToggleSearch={() => setIsSearchOpen(!isSearchOpen)}
+      />
 
       {/* Message List */}
       <ChatMessageList
-        messages={messages}
+        messages={displayedMessages}
         character={character}
         persona={persona}
         onReroll={handleReroll}

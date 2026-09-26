@@ -60,11 +60,17 @@ export function ChatMessageList({
     >
       {/* Intro Banner for the Character */}
       <div className="text-center py-6 border-b border-white/5 space-y-2 max-w-lg mx-auto">
-        <img
-          src={character.avatar}
-          alt={character.name}
-          className="w-16 h-16 rounded-2xl mx-auto object-cover ring-2 ring-purple-500/40 shadow-xl"
-        />
+        {character.avatar ? (
+          <img
+            src={character.avatar}
+            alt={character.name}
+            className="w-16 h-16 rounded-2xl mx-auto object-cover ring-2 ring-purple-500/40 shadow-xl"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-2xl mx-auto bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-lg ring-2 ring-purple-500/40 shadow-xl">
+            <Bot className="w-8 h-8" />
+          </div>
+        )}
         <h3 className="text-lg font-bold text-white">{character.name}</h3>
         <p className="text-xs text-zinc-400 font-light">{character.description || character.tagline}</p>
         <div className="flex flex-wrap justify-center gap-1.5 pt-1">
@@ -95,11 +101,17 @@ export function ChatMessageList({
       {isGenerating && activeStreamingMessage && (
         <div className="flex gap-3.5 p-3 md:p-4 rounded-2xl bg-zinc-950/70 border border-cyan-500/30 mr-4 sm:mr-12 animate-in fade-in duration-150">
           <div className="shrink-0 pt-0.5">
-            <img
-              src={character.avatar}
-              alt={character.name}
-              className="w-8 h-8 rounded-full object-cover ring-2 ring-cyan-500/50"
-            />
+            {character.avatar ? (
+              <img
+                src={character.avatar}
+                alt={character.name}
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-cyan-500/50"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs ring-2 ring-cyan-500/50">
+                <Bot className="w-4 h-4" />
+              </div>
+            )}
           </div>
           <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-center gap-2">

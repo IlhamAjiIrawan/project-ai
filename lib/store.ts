@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ActiveView, ApiSettings, Character, ChatMessage, ChatSession, UserPersona } from '@/types';
+import { ActiveView, ApiSettings, Character, UserPersona } from '@/types';
 import { DEFAULT_SETTINGS, db } from './db';
 
 interface AppState {
@@ -75,9 +75,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ settings: updated });
     try {
       await db.settings.put({ id: 'global', ...updated });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('roleplay_api_settings', JSON.stringify(updated));
-      }
     } catch (e) {
       console.error('Error saving settings to db:', e);
     }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { ApiSettings, ProviderType } from '@/types';
+import { ApiSettings, ProviderType, AppBackupData } from '@/types';
 import {
   X,
   Key,
@@ -61,6 +61,16 @@ export function SettingsModal() {
     const messages = await db.chatMessages.toArray();
     const personas = await db.personas.toArray();
 
+    // Sanitize API keys from backup to prevent credential leaks
+    const sanitizedSettings: ApiSettings = {
+      ...form,
+      geminiApiKey: '',
+      openRouterApiKey: '',
+      groqApiKey: '',
+      openaiApiKey: '',
+      customApiKey: '',
+    };
+
     const backupData = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -68,7 +78,7 @@ export function SettingsModal() {
       sessions,
       messages,
       personas,
-      settings: form,
+      settings: sanitizedSettings,
     };
 
     downloadJson(`ai_roleplay_backup_${Date.now()}.json`, backupData);
@@ -79,7 +89,7 @@ export function SettingsModal() {
     if (!file) return;
 
     try {
-      const data = await readJsonFile(file);
+      const data = await readJsonFile<AppBackupData>(file);
       if (!data.characters && !data.messages) {
         alert('File backup tidak valid.');
         return;

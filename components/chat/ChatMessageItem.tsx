@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Character, ChatMessage, UserPersona } from '@/types';
 import { ChatMessageFormatter } from './ChatMessageFormatter';
 import {
@@ -48,15 +48,22 @@ export function ChatMessageItem({
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
 
-  const [copied, setCopied] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(message.content);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
-  // Swipe logic
+  // Swipe logic: calculate active content before initializing edit state
   const swipes = message.swipes || [message.content];
   const currentSwipeIdx = message.currentSwipeIndex ?? swipes.length - 1;
   const currentContent = swipes[currentSwipeIdx] || message.content;
+
+  const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(currentContent);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Sync editContent whenever current swipe changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditContent(currentContent);
+    }
+  }, [currentContent, isEditing]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(currentContent);

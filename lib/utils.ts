@@ -20,17 +20,19 @@ export function formatDate(timestamp: number): string {
 }
 
 /**
- * Format raw text into HTML or structured elements with Roleplay styling:
- * - *italic / actions* -> Styled action / body language
- * - "quotes" -> Styled spoken dialogue
- * - (OOC: text) -> Styled out of character note
+ * Formats raw roleplay text for plain text or markdown export rendering:
+ * - Normalizes actions (*asterisks*) to markdown italic format
+ * - Normalizes quotes to curly quotes for cleaner reading
  */
 export function formatRoleplayText(text: string): string {
   if (!text) return '';
-  return text;
+  return text
+    .replace(/\*([^*]+)\*/g, '_$1_')
+    .replace(/"([^"]+)"/g, '“$1”')
+    .trim();
 }
 
-export function downloadJson(filename: string, data: any) {
+export function downloadJson(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -42,14 +44,14 @@ export function downloadJson(filename: string, data: any) {
   URL.revokeObjectURL(url);
 }
 
-export function readJsonFile<T = any>(file: File): Promise<T> {
+export function readJsonFile<T = unknown>(file: File): Promise<T> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
-        resolve(json);
-      } catch (err) {
+        resolve(json as T);
+      } catch {
         reject(new Error('Format file JSON tidak valid.'));
       }
     };

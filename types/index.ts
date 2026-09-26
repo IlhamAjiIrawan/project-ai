@@ -100,4 +100,14 @@ export interface ApiSettings {
   ttsPitch: number;
 }
 
+export interface AppBackupData {
+  version: number;
+  exportedAt: string;
+  characters?: Character[];
+  sessions?: ChatSession[];
+  messages?: ChatMessage[];
+  personas?: UserPersona[];
+  settings?: ApiSettings;
+}
+
 export type ActiveView = 'chat' | 'gallery' | 'character_editor' | 'persona_editor';
