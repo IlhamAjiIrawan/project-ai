@@ -433,12 +433,26 @@ export default function SettingsHubPage() {
                     CP
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-white">Custom Endpoint (Ollama / LM Studio / Local LLM)</h4>
+                    <h4 className="font-bold text-sm text-white">Custom Endpoint (Ollama Cloud / Lokal / LM Studio)</h4>
                     <p className="text-[11px] text-zinc-400">Kompatibel dengan API format OpenAI</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        customBaseUrl: 'https://ollama.com/v1',
+                        customApiKey: '',
+                        customModelName: form.customModelName || 'gemma4:27b',
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-medium transition-all cursor-pointer"
+                  >
+                    ☁️ Ollama Cloud
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
@@ -451,7 +465,7 @@ export default function SettingsHubPage() {
                     }
                     className="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[10px] font-medium transition-all cursor-pointer"
                   >
-                    Set URL Ollama
+                    💻 Ollama Lokal
                   </button>
                   <button
                     type="button"
@@ -469,13 +483,28 @@ export default function SettingsHubPage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 space-y-1">
-                <p className="font-semibold">⚠️ Catatan Penggunaan Ollama:</p>
-                <p className="text-zinc-300">
-                  • Gunakan Base URL: <code className="bg-black/40 px-1 py-0.5 rounded text-amber-200">http://localhost:11434/v1</code> (jangan gunakan <code className="line-through text-rose-300">https://ollama.com</code>).
-                  <br />
-                  • Pastikan aplikasi Ollama sedang berjalan di PC Anda dan model sudah di-download (contoh: <code className="text-cyan-300">ollama run gemma2:27b</code> atau <code className="text-cyan-300">ollama run llama3.2</code>).
-                </p>
+              <div className="p-3 rounded-xl bg-zinc-800/60 border border-zinc-700/50 text-[11px] space-y-2">
+                <div className="flex gap-2 items-start">
+                  <span className="text-emerald-400 font-bold mt-0.5">☁️</span>
+                  <div>
+                    <p className="font-semibold text-emerald-300">Ollama Cloud (Hosted):</p>
+                    <p className="text-zinc-300">
+                      Base URL: <code className="bg-black/40 px-1 py-0.5 rounded text-emerald-200">https://ollama.com/v1</code> — Butuh{' '}
+                      <strong className="text-amber-300">API Key</strong> dari akun Ollama kamu.{' '}
+                      <a href="https://ollama.com/settings/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Buat API Key di sini →</a>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 items-start">
+                  <span className="text-cyan-400 font-bold mt-0.5">💻</span>
+                  <div>
+                    <p className="font-semibold text-cyan-300">Ollama Lokal (di PC kamu):</p>
+                    <p className="text-zinc-300">
+                      Base URL: <code className="bg-black/40 px-1 py-0.5 rounded text-cyan-200">http://localhost:11434/v1</code> — API Key: <code className="text-cyan-200">ollama</code> (default, tidak perlu auth).
+                      Pastikan model sudah di-download: <code className="text-cyan-300">ollama run gemma4:12b</code>
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
@@ -490,12 +519,15 @@ export default function SettingsHubPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-zinc-400 block mb-1">API Key (Opsional)</label>
+                  <label className="text-[11px] text-zinc-400 block mb-1">
+                    API Key{' '}
+                    <span className="text-amber-400 font-semibold">(Wajib untuk Cloud)</span>
+                  </label>
                   <input
                     type="password"
                     value={form.customApiKey}
                     onChange={(e) => setForm({ ...form, customApiKey: e.target.value })}
-                    placeholder="ollama / bearer token"
+                    placeholder="Ollama Cloud: masukkan API Key | Lokal: ollama"
                     className="w-full px-3 py-1.5 rounded-xl glass-input text-xs font-mono"
                   />
                 </div>

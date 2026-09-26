@@ -163,12 +163,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Helpful URL fix & validation for Ollama
-      if (rawBaseUrl.includes('ollama.com')) {
+      // Validate: block bare ollama.com homepage (not a valid API endpoint)
+      // Note: https://ollama.com/v1 IS a valid Ollama Cloud API endpoint — do NOT block it.
+      const ollamaHomepagePattern = /^https?:\/\/(?:www\.)?ollama\.com\/?$/i;
+      if (ollamaHomepagePattern.test(rawBaseUrl)) {
         return NextResponse.json(
           {
             error:
-              'URL "https://ollama.com" adalah website resmi Ollama, bukan server API. Jika Anda menjalankan Ollama di komputer Anda, silakan ganti Base URL menjadi "http://localhost:11434/v1" dan pastikan aplikasi Ollama sedang aktif.',
+              'URL "https://ollama.com" adalah halaman utama website Ollama, bukan endpoint API. ' +
+              'Untuk Ollama Cloud, gunakan "https://ollama.com/v1". ' +
+              'Untuk Ollama lokal di komputer Anda, gunakan "http://localhost:11434/v1".',
           },
           { status: 400 }
         );
@@ -179,12 +183,24 @@ export async function POST(req: NextRequest) {
         endpoint = endpoint.replace(/\/+$/, '') + '/chat/completions';
       }
 
-      const customApiKey = settings.customApiKey?.trim() || 'ollama';
+      const customApiKey = settings.customApiKey?.trim();
+      const isCloudEndpoint = endpoint.includes('ollama.com') || (!endpoint.includes('localhost') && !endpoint.includes('127.0.0.1') && !endpoint.includes('0.0.0.0'));
+
+      if (!customApiKey && isCloudEndpoint) {
+        return NextResponse.json(
+          {
+            error: 'API Key untuk Custom Provider belum diisi. Untuk Ollama Cloud (https://ollama.com/v1), masukkan API Key dari akun Ollama kamu di pengaturan.',
+          },
+          { status: 400 }
+        );
+      }
+
+      const finalApiKey = customApiKey || 'ollama'; // 'ollama' only valid for local servers without auth
       const customModel = settings.customModelName?.trim() || model || 'llama3';
 
       return await handleOpenAICompatible(
         endpoint,
-        customApiKey,
+        finalApiKey,
         customModel,
         systemPrompt,
         messages,
@@ -394,9 +410,13 @@ async function handleOpenAICompatible(
   } catch (networkErr: unknown) {
     const errorMsg = networkErr instanceof Error ? networkErr.message : String(networkErr);
     if (providerLabel === 'Custom/Ollama') {
+      const isCloud = endpoint.includes('ollama.com');
+      const cloudHint = isCloud
+        ? `Pastikan:\n1. API Key Ollama Cloud Anda sudah diisi dengan benar di pengaturan.\n2. Model "${modelName}" tersedia di katalog Ollama Cloud (https://ollama.com/models).\n3. Akun Ollama Cloud Anda memiliki akses ke model tersebut.`
+        : `Pastikan:\n1. Server Ollama lokal sedang berjalan di komputer Anda.\n2. Gunakan URL: http://localhost:11434/v1\n3. Model "${modelName}" sudah didownload (Jalankan: 'ollama pull ${modelName}').`;
       return NextResponse.json(
         {
-          error: `Gagal terhubung ke server ${providerLabel} di (${endpoint}).\n\nPastikan:\n1. Server Ollama atau LLM lokal sedang berjalan di komputer Anda.\n2. Jika menggunakan Ollama lokal, gunakan URL: http://localhost:11434/v1\n3. Model "${modelName}" sudah didownload di Ollama (Jalankan: 'ollama run ${modelName}').`,
+          error: `Gagal terhubung ke server ${providerLabel} di (${endpoint}).\n\n${cloudHint}`,
         },
         { status: 502 }
       );

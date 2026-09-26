@@ -1,4 +1,5 @@
 import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType } from '@/types';
+import { decryptSensitiveText } from '@/lib/crypto';
 
 export interface GenerateRoleplayOptions {
   character: Character;
@@ -198,6 +199,17 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const maxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
   const topP = settings.topP ?? 0.95;
 
+  // Decrypt all API keys client-side before sending to the server.
+  // The server (Node.js) cannot decrypt them because Web Crypto API is browser-only.
+  const decryptedSettings: ApiSettings = {
+    ...settings,
+    geminiApiKey: await decryptSensitiveText(settings.geminiApiKey || ''),
+    openRouterApiKey: await decryptSensitiveText(settings.openRouterApiKey || ''),
+    groqApiKey: await decryptSensitiveText(settings.groqApiKey || ''),
+    openaiApiKey: await decryptSensitiveText(settings.openaiApiKey || ''),
+    customApiKey: await decryptSensitiveText(settings.customApiKey || ''),
+  };
+
   const payload = {
     provider,
     model,
@@ -206,7 +218,7 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     temperature,
     maxTokens,
     topP,
-    settings,
+    settings: decryptedSettings,
   };
 
   const response = await fetchWithRetry(
