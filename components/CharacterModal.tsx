@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
 import { Character, LoreEntry, ProviderType, ResponseLengthType } from '@/types';
@@ -14,8 +14,13 @@ import {
   Trash2,
   Save,
   MessageSquare,
+  Upload,
+  Camera,
+  Loader2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { POPULAR_MODELS } from '@/lib/providers/types';
+import { processImageFile } from '@/lib/utils';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80',
@@ -39,6 +44,12 @@ export function CharacterModal() {
   const [category, setCategory] = useState<Character['category']>('scifi');
   const [description, setDescription] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isDragOverAvatar, setIsDragOverAvatar] = useState(false);
+  const [avatarInputMode, setAvatarInputMode] = useState<'upload' | 'url' | 'presets'>('upload');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const [systemPrompt, setSystemPrompt] = useState('');
   const [greetingMessage, setGreetingMessage] = useState('');
@@ -170,6 +181,29 @@ export function CharacterModal() {
 
   const handleUpdateLoreContent = (id: string, content: string) => {
     setLorebook(lorebook.map((e) => (e.id === id ? { ...e, content } : e)));
+  };
+
+  const handleAvatarFileSelected = async (file?: File) => {
+    if (!file) return;
+    try {
+      setIsUploadingAvatar(true);
+      const dataUrl = await processImageFile(file, 512, 0.88);
+      setAvatar(dataUrl);
+      setAvatarInputMode('upload');
+    } catch (err: any) {
+      alert(err?.message || 'Gagal memproses file gambar avatar.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverAvatar(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleAvatarFileSelected(file);
+    }
   };
 
   const handleSave = async () => {
@@ -339,39 +373,186 @@ export function CharacterModal() {
                 />
               </div>
 
-              {/* Avatar Selector */}
-              <div>
-                <label className="block text-xs font-semibold mb-1">Avatar Karakter</label>
-                <div className="flex items-center gap-3">
-                  <img
-                    src={avatar || PRESET_AVATARS[0]}
-                    alt="Avatar preview"
-                    className="w-12 h-12 rounded-xl object-cover border border-zinc-700 shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={avatar}
-                    onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="URL gambar avatar..."
-                    className={`flex-1 px-3 py-2 rounded-xl border ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
-                  {PRESET_AVATARS.map((presetUrl, idx) => (
+              {/* Avatar Upload & Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold">
+                    Foto Profil / Avatar Karakter
+                  </label>
+                  <div className="flex items-center gap-1 text-[11px]">
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => setAvatar(presetUrl)}
-                      className={`w-7 h-7 rounded-lg overflow-hidden border transition-all shrink-0 cursor-pointer ${
-                        avatar === presetUrl ? 'border-white scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+                      onClick={() => setAvatarInputMode('upload')}
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        avatarInputMode === 'upload'
+                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
                       }`}
                     >
-                      <img src={presetUrl} alt="preset" className="w-full h-full object-cover" />
+                      Upload File
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setAvatarInputMode('url')}
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        avatarInputMode === 'url'
+                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                      }`}
+                    >
+                      URL Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAvatarInputMode('presets')}
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        avatarInputMode === 'presets'
+                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                      }`}
+                    >
+                      Preset
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, image/gif"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarFileSelected(file);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
+                  {/* Avatar Preview Box with Upload Trigger */}
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragOverAvatar(true);
+                    }}
+                    onDragLeave={() => setIsDragOverAvatar(false)}
+                    onDrop={handleAvatarDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                      isDragOverAvatar
+                        ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg'
+                        : isDark
+                        ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                        : 'border-zinc-300 bg-zinc-100 hover:border-zinc-400'
+                    }`}
+                    title="Klik atau Drag & Drop gambar untuk upload foto profil"
+                  >
+                    {isUploadingAvatar ? (
+                      <div className="flex flex-col items-center gap-1 text-center p-1">
+                        <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
+                        <span className="text-[10px] text-zinc-400">Memproses...</span>
+                      </div>
+                    ) : avatar ? (
+                      <>
+                        <img
+                          src={avatar}
+                          alt="Avatar preview"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 p-1 text-center">
+                          <Camera className="w-4 h-4" />
+                          <span className="text-[9px] font-medium leading-tight">Ganti Foto</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-zinc-400 p-2 text-center">
+                        <Upload className="w-5 h-5" />
+                        <span className="text-[10px]">Upload</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right controls based on mode */}
+                  <div className="flex-1 w-full space-y-2">
+                    {avatarInputMode === 'upload' && (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOverAvatar(true);
+                        }}
+                        onDragLeave={() => setIsDragOverAvatar(false)}
+                        onDrop={handleAvatarDrop}
+                        className={`p-3 rounded-xl border border-dashed flex flex-col sm:flex-row items-center justify-between gap-2.5 transition-colors ${
+                          isDragOverAvatar
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : isDark
+                            ? 'border-zinc-800 bg-zinc-900/50'
+                            : 'border-zinc-200 bg-zinc-50'
+                        }`}
+                      >
+                        <div className="text-center sm:text-left">
+                          <p className="text-xs font-medium">Upload File dari Komputer</p>
+                          <p className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                            PNG, JPG, WEBP, GIF (Otomatis dioptimalkan)
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingAvatar}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer shrink-0 ${
+                            isDark
+                              ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700'
+                              : 'bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-100'
+                          }`}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Pilih File Gambar</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {avatarInputMode === 'url' && (
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={avatar}
+                          onChange={(e) => setAvatar(e.target.value)}
+                          placeholder="https://example.com/avatar.jpg"
+                          className={`w-full px-3 py-2 rounded-xl border text-xs ${
+                            isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                          }`}
+                        />
+                        <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          Masukkan tautan langsung gambar (Direct Image URL).
+                        </p>
+                      </div>
+                    )}
+
+                    {avatarInputMode === 'presets' && (
+                      <div>
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                          {PRESET_AVATARS.map((presetUrl, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setAvatar(presetUrl)}
+                              className={`w-8 h-8 rounded-lg overflow-hidden border transition-all shrink-0 cursor-pointer ${
+                                avatar === presetUrl
+                                  ? isDark ? 'border-white scale-110 shadow' : 'border-zinc-900 scale-110 shadow'
+                                  : 'border-transparent opacity-60 hover:opacity-100'
+                              }`}
+                            >
+                              <img src={presetUrl} alt="preset" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                        <p className={`text-[10px] mt-1 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          Klik salah satu avatar preset di atas untuk memilih.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

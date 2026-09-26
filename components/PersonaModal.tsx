@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { UserPersona } from '@/types';
-import { X, UserCheck, Plus, Trash2, Edit3, Save } from 'lucide-react';
+import { X, UserCheck, Plus, Trash2, Edit3, Save, Upload, Camera, Loader2 } from 'lucide-react';
+import { processImageFile } from '@/lib/utils';
 
 const PRESET_USER_AVATARS = [
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -25,6 +26,23 @@ export function PersonaModal() {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
   const [bio, setBio] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const personaFileRef = useRef<HTMLInputElement>(null);
+
+  const handlePersonaFile = async (file?: File) => {
+    if (!file) return;
+    try {
+      setIsUploading(true);
+      const dataUrl = await processImageFile(file, 256, 0.85);
+      setAvatar(dataUrl);
+    } catch (err: any) {
+      alert(err?.message || 'Gagal memproses gambar persona.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+
 
   const isDark = theme === 'dark';
 
@@ -147,18 +165,59 @@ export function PersonaModal() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1">Avatar</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold">Avatar Persona</label>
+                  <button
+                    type="button"
+                    onClick={() => personaFileRef.current?.click()}
+                    disabled={isUploading}
+                    className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                      isDark ? 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                    }`}
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>Upload Foto</span>
+                  </button>
+                </div>
+
+                <input
+                  ref={personaFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePersonaFile(file);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+
                 <div className="flex items-center gap-2.5 mb-2">
-                  <img
-                    src={avatar || PRESET_USER_AVATARS[0]}
-                    alt="avatar"
-                    className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0"
-                  />
+                  <div
+                    onClick={() => personaFileRef.current?.click()}
+                    className="relative group w-10 h-10 rounded-full overflow-hidden border border-zinc-700 shrink-0 cursor-pointer flex items-center justify-center bg-zinc-800"
+                    title="Klik untuk upload foto persona"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                    ) : (
+                      <>
+                        <img
+                          src={avatar || PRESET_USER_AVATARS[0]}
+                          alt="avatar"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <Camera className="w-3.5 h-3.5" />
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={avatar}
                     onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="URL gambar..."
+                    placeholder="URL gambar atau upload..."
                     className={`flex-1 px-3 py-1.5 rounded-lg text-xs border ${
                       isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
                     }`}

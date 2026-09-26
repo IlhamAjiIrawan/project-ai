@@ -59,3 +59,72 @@ export function readJsonFile<T = unknown>(file: File): Promise<T> {
     reader.readAsText(file);
   });
 }
+
+/**
+ * Reads an image file, resizes it if needed to fit maxDimension, and returns a compressed data URL.
+ */
+export function processImageFile(
+  file: File,
+  maxDimension: number = 512,
+  quality: number = 0.85
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      return reject(new Error('File yang dipilih harus berupa file gambar.'));
+    }
+
+    // Limit maximum raw file size to 15MB before processing
+    if (file.size > 15 * 1024 * 1024) {
+      return reject(new Error('Ukuran file terlalu besar. Maksimal 15MB.'));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Gagal memproses gambar. Format mungkin tidak didukung.'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return resolve(e.target?.result as string);
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try webp first, fallback to jpeg/png
+        try {
+          const webpData = canvas.toDataURL('image/webp', quality);
+          if (webpData.startsWith('data:image/webp')) {
+            return resolve(webpData);
+          }
+        } catch {
+          // ignore fallback
+        }
+
+        try {
+          const jpegData = canvas.toDataURL('image/jpeg', quality);
+          resolve(jpegData);
+        } catch {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+

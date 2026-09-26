@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useAppStore } from '@/lib/store';
@@ -12,7 +12,12 @@ import {
   Trash2,
   Save,
   X,
+  Upload,
+  Camera,
+  Loader2,
+  Image as ImageIcon,
 } from 'lucide-react';
+import { processImageFile } from '@/lib/utils';
 
 const PRESET_USER_AVATARS = [
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -34,14 +39,40 @@ export default function PersonasStudioPage() {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
   const [bio, setBio] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<'upload' | 'url' | 'presets'>('upload');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isDark = theme === 'dark';
+
+  const handleFileUpload = async (file?: File) => {
+    if (!file) return;
+    try {
+      setIsUploading(true);
+      const dataUrl = await processImageFile(file, 256, 0.85);
+      setAvatar(dataUrl);
+      setAvatarMode('upload');
+    } catch (err: any) {
+      alert(err?.message || 'Gagal memproses file gambar persona.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  };
 
   const startCreate = () => {
     setName('');
     setAvatar(PRESET_USER_AVATARS[0]);
     setBio('');
     setEditingId(null);
+    setAvatarMode('upload');
     setIsEditing(true);
   };
 
@@ -50,8 +81,10 @@ export default function PersonasStudioPage() {
     setAvatar(persona.avatar);
     setBio(persona.bio);
     setEditingId(persona.id);
+    setAvatarMode('upload');
     setIsEditing(true);
   };
+
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -151,44 +184,143 @@ export default function PersonasStudioPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Avatar Selector */}
             <div className="space-y-3">
-              <label className="text-xs font-semibold">Avatar</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold">Foto Profil Persona</label>
+                <div className="flex items-center gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setAvatarMode('upload')}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      avatarMode === 'upload'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    Upload
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarMode('url')}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      avatarMode === 'url'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarMode('presets')}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      avatarMode === 'presets'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                    }`}
+                  >
+                    Preset
+                  </button>
+                </div>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+
               <div className={`flex flex-col items-center gap-3 p-4 rounded-xl border ${
                 isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
               }`}>
-                <img
-                  src={avatar || PRESET_USER_AVATARS[0]}
-                  alt="Avatar Preview"
-                  className="w-16 h-16 rounded-full object-cover border border-zinc-700"
-                />
+                {/* Avatar Preview Box */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative group w-20 h-20 rounded-full overflow-hidden border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                    isDragOver
+                      ? 'border-blue-500 scale-105 shadow-lg'
+                      : isDark
+                      ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                      : 'border-zinc-300 bg-zinc-200 hover:border-zinc-400'
+                  }`}
+                  title="Klik atau Drag & Drop gambar untuk upload"
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+                  ) : (
+                    <>
+                      <img
+                        src={avatar || PRESET_USER_AVATARS[0]}
+                        alt="Avatar Preview"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-0.5">
+                        <Camera className="w-4 h-4" />
+                        <span className="text-[9px] font-medium">Ganti</span>
+                      </div>
+                    </>
+                  )}
+                </div>
 
+                {/* Sub Controls */}
                 <div className="w-full space-y-2">
-                  <span className={`text-[10px] block text-center ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                    Pilih Avatar:
-                  </span>
-                  <div className="flex justify-center gap-1.5 flex-wrap">
-                    {PRESET_USER_AVATARS.map((avUrl, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setAvatar(avUrl)}
-                        className={`w-6 h-6 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
-                          avatar === avUrl ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={avUrl} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
+                  {avatarMode === 'upload' && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                        isDark
+                          ? 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800'
+                          : 'bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-100'
+                      }`}
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Gambar</span>
+                    </button>
+                  )}
 
-                  <input
-                    type="text"
-                    value={avatar}
-                    onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="URL gambar avatar..."
-                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs border ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
-                  />
+                  {avatarMode === 'url' && (
+                    <input
+                      type="text"
+                      value={avatar}
+                      onChange={(e) => setAvatar(e.target.value)}
+                      placeholder="https://example.com/avatar.jpg"
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs border ${
+                        isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
+                    />
+                  )}
+
+                  {avatarMode === 'presets' && (
+                    <div className="flex justify-center gap-1.5 flex-wrap">
+                      {PRESET_USER_AVATARS.map((avUrl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setAvatar(avUrl)}
+                          className={`w-7 h-7 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
+                            avatar === avUrl
+                              ? isDark ? 'border-white scale-110' : 'border-zinc-900 scale-110'
+                              : 'border-transparent opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={avUrl} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
