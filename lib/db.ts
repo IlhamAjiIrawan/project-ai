@@ -97,11 +97,27 @@ export async function seedDatabaseIfEmpty() {
       const charCount = await db.characters.count();
       if (charCount === 0) {
         await db.characters.bulkPut(PRESET_CHARACTERS);
+      } else {
+        // Sync any new presets that don't exist yet
+        for (const preset of PRESET_CHARACTERS) {
+          const exists = await db.characters.get(preset.id);
+          if (!exists) {
+            await db.characters.put(preset);
+          }
+        }
       }
 
       const personaCount = await db.personas.count();
       if (personaCount === 0) {
         await db.personas.bulkPut(PRESET_PERSONAS);
+      } else {
+        // Sync any new personas that don't exist yet
+        for (const preset of PRESET_PERSONAS) {
+          const exists = await db.personas.get(preset.id);
+          if (!exists) {
+            await db.personas.put(preset);
+          }
+        }
       }
 
       const settingsCount = await db.settings.count();

@@ -23,6 +23,7 @@ import { POPULAR_MODELS } from '@/lib/providers/types';
 import { processImageFile } from '@/lib/utils';
 
 const PRESET_AVATARS = [
+  '/avatars/sparkle.jpg',
   'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
