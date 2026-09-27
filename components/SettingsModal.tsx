@@ -75,6 +75,10 @@ export function SettingsModal() {
           topA: 0.20,
           topK: 40,
           repetitionPenalty: 1.10,
+          contextLimit: 8192,
+          ltmContextBudget: 1200,
+          embeddingContextBudget: 800,
+          chatHistoryDepth: 30,
         });
         break;
       case 'creative':
@@ -87,6 +91,10 @@ export function SettingsModal() {
           topA: 0.00,
           topK: 60,
           repetitionPenalty: 1.05,
+          contextLimit: 4096,
+          ltmContextBudget: 800,
+          embeddingContextBudget: 500,
+          chatHistoryDepth: 20,
         });
         break;
       case 'rpg':
@@ -99,6 +107,10 @@ export function SettingsModal() {
           topA: 0.15,
           topK: 40,
           repetitionPenalty: 1.12,
+          contextLimit: 6144,
+          ltmContextBudget: 1000,
+          embeddingContextBudget: 1000,
+          chatHistoryDepth: 24,
         });
         break;
       case 'precise':
@@ -111,6 +123,10 @@ export function SettingsModal() {
           topA: 0.30,
           topK: 30,
           repetitionPenalty: 1.00,
+          contextLimit: 3072,
+          ltmContextBudget: 400,
+          embeddingContextBudget: 300,
+          chatHistoryDepth: 14,
         });
         break;
     }
@@ -736,6 +752,122 @@ export function SettingsModal() {
                   />
                   <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                     Mencegah karakter mengulang kalimat atau frasa yang sama secara repetitif.
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Memory & Context Window Parameters Section */}
+              <div className={`p-4 rounded-xl border space-y-4 ${
+                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Manajemen Memori & Jendela Konteks (4 Parameter)
+                  </h3>
+                  <span className={`text-[10px] px-2 py-0.5 rounded border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'
+                  }`}>
+                    Token Budgeting
+                  </span>
+                </div>
+
+                {/* 1. Context Limit */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      1. Context Limit (Batas Total Konteks):
+                      <span className="font-mono text-zinc-400 font-normal">{form.contextLimit ?? 4096} Token</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {(form.contextLimit ?? 4096) >= 16384 ? 'Sangat Besar' : (form.contextLimit ?? 4096) >= 8192 ? 'Besar' : 'Standar'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2048"
+                    max="32768"
+                    step="512"
+                    value={form.contextLimit ?? 4096}
+                    onChange={(e) => setForm({ ...form, contextLimit: parseInt(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Batas total token gabungan (System Prompt + Memori + Riwayat Chat + Jawaban AI).
+                  </p>
+                </div>
+
+                {/* 2. LTM Context Budget */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      2. LTM Context Budget (Kuota Memori Peristiwa):
+                      <span className="font-mono text-zinc-400 font-normal">{form.ltmContextBudget ?? 800} Token</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      ~{Math.round((form.ltmContextBudget ?? 800) / 40)} butir memori
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="200"
+                    max="3000"
+                    step="50"
+                    value={form.ltmContextBudget ?? 800}
+                    onChange={(e) => setForm({ ...form, ltmContextBudget: parseInt(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Alokasi token khusus untuk memori peristiwa penting, janji, rahasia, dan relasi.
+                  </p>
+                </div>
+
+                {/* 3. Embedding Context Budget */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      3. Embedding Context Budget (Kuota World Lore / RAG):
+                      <span className="font-mono text-zinc-400 font-normal">{form.embeddingContextBudget ?? 500} Token</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      ~{Math.round((form.embeddingContextBudget ?? 500) / 60)} entri lore
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="100"
+                    max="2000"
+                    step="50"
+                    value={form.embeddingContextBudget ?? 500}
+                    onChange={(e) => setForm({ ...form, embeddingContextBudget: parseInt(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Alokasi token untuk entri lorebook / ensiklopedia dunia yang cocok dengan topik.
+                  </p>
+                </div>
+
+                {/* 4. Chat History Depth */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      4. Chat History Depth (Kedalaman Riwayat Chat):
+                      <span className="font-mono text-zinc-400 font-normal">{form.chatHistoryDepth ?? 20} Pesan</span>
+                    </span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {form.chatHistoryDepth ?? 20} putaran terakhir
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="4"
+                    max="60"
+                    step="2"
+                    value={form.chatHistoryDepth ?? 20}
+                    onChange={(e) => setForm({ ...form, chatHistoryDepth: parseInt(e.target.value) })}
+                    className="w-full cursor-pointer accent-zinc-500"
+                  />
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Jumlah pesan terbaru yang langsung dikirimkan ke AI sebagai riwayat aktif.
                   </p>
                 </div>
               </div>

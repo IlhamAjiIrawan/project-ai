@@ -51,6 +51,7 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
   const [newCategory, setNewCategory] = useState<MemoryCategory>('event');
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractStatus, setExtractStatus] = useState<string | null>(null);
+  const [extractError, setExtractError] = useState<boolean>(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -70,6 +71,7 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
       characterId: character.id,
       content: newContent.trim(),
       category: newCategory,
+      source: 'manual',
       enabled: true,
       timestamp: Date.now(),
     };
@@ -111,47 +113,93 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
     }
 
     setIsExtracting(true);
-    setExtractStatus('Menganalisis percakapan...');
+    setExtractError(false);
+    setExtractStatus('Menganalisis & merekonsiliasi memori dengan alur percakapan...');
 
     try {
-      const extracted = await extractMemoriesFromChat({
+      const result = await extractMemoriesFromChat({
         character,
         userPersona: persona,
         chatHistory,
+        existingMemories: memories,
         settings,
       });
 
-      if (extracted.length === 0) {
-        setExtractStatus('Tidak ada memori baru yang terdeteksi.');
-        setTimeout(() => setExtractStatus(null), 3000);
-        return;
-      }
-
-      // Filter duplicates against existing memories
-      const existingContents = new Set(memories.map((m) => m.content.toLowerCase().trim()));
       let addedCount = 0;
+      let updatedCount = 0;
+      let removedCount = 0;
 
-      for (const item of extracted) {
-        if (!existingContents.has(item.content.toLowerCase().trim())) {
-          const newMem: SessionMemory = {
-            id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-            sessionId: selectedSessionId,
-            characterId: character.id,
-            content: item.content,
-            category: item.category,
-            enabled: true,
-            timestamp: Date.now(),
-          };
-          await db.sessionMemories.put(newMem);
-          addedCount++;
+      await db.transaction('rw', db.sessionMemories, async () => {
+        // 1. Process Removals (Strictly protect manual memories)
+        if (result.remove && result.remove.length > 0) {
+          for (const item of result.remove) {
+            const existing = memories.find((m) => m.id === item.id);
+            if (existing && existing.source !== 'manual') {
+              await db.sessionMemories.delete(item.id);
+              removedCount++;
+            }
+          }
         }
-      }
 
-      setExtractStatus(`Berhasil mengekstrak ${addedCount} memori penting!`);
-      setTimeout(() => setExtractStatus(null), 3500);
+        // 2. Process Updates
+        if (result.update && result.update.length > 0) {
+          for (const item of result.update) {
+            const existing = memories.find((m) => m.id === item.id);
+            if (existing) {
+              const updates: Partial<SessionMemory> = {
+                content: item.content,
+                timestamp: Date.now(),
+              };
+              if (item.category) updates.category = item.category;
+              if (item.importance) updates.importance = item.importance;
+              await db.sessionMemories.update(item.id, updates);
+              updatedCount++;
+            }
+          }
+        }
+
+        // 3. Process Additions (avoid duplicate content against current active)
+        if (result.add && result.add.length > 0) {
+          const currentList = await db.sessionMemories.where('sessionId').equals(selectedSessionId).toArray();
+          const currentContents = new Set(currentList.map((m) => m.content.toLowerCase().trim()));
+
+          for (const item of result.add) {
+            if (!currentContents.has(item.content.toLowerCase().trim())) {
+              const newMem: SessionMemory = {
+                id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                sessionId: selectedSessionId,
+                characterId: character.id,
+                content: item.content,
+                category: item.category,
+                importance: item.importance || 'medium',
+                source: 'auto',
+                enabled: true,
+                timestamp: Date.now(),
+              };
+              await db.sessionMemories.put(newMem);
+              currentContents.add(item.content.toLowerCase().trim());
+              addedCount++;
+            }
+          }
+        }
+      });
+
+      setExtractError(false);
+      if (addedCount === 0 && updatedCount === 0 && removedCount === 0) {
+        setExtractStatus('Memori sudah optimal & mutakhir. Tidak ada perubahan yang diperlukan.');
+      } else {
+        const parts: string[] = [];
+        if (addedCount > 0) parts.push(`+${addedCount} baru`);
+        if (updatedCount > 0) parts.push(`~${updatedCount} diperbarui`);
+        if (removedCount > 0) parts.push(`-${removedCount} selesai/dihapus`);
+        setExtractStatus(`Sinkronisasi selesai: ${parts.join(', ')}`);
+      }
+      setTimeout(() => setExtractStatus(null), 5000);
     } catch (err: any) {
-      alert(`Gagal mengekstrak memori: ${err.message || 'Error'}`);
-      setExtractStatus(null);
+      const msg = err?.message || 'Gagal menghubungi AI untuk merekonsiliasi memori.';
+      setExtractError(true);
+      setExtractStatus(msg);
+      alert(`Gagal mengekstrak memori:\n\n${msg}`);
     } finally {
       setIsExtracting(false);
     }
@@ -188,7 +236,7 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
           </button>
         </div>
 
-        {/* Action Banner: Auto Extract */}
+        {/* Action Banner: Auto Extract & Reconcile */}
         <div className={`p-3 border-b space-y-2 shrink-0 ${
           isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-zinc-50 border-zinc-100'
         }`}>
@@ -206,25 +254,29 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
               {isExtracting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Menganalisis Percakapan...</span>
+                  <span>Merekonsiliasi & Memperbarui Memori...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Ekstrak Memori Otomatis dari Chat</span>
+                  <span>Sinkronisasi & Ekstrak Memori Otomatis</span>
                 </>
               )}
             </button>
           </div>
 
           {extractStatus && (
-            <p className="text-[11px] text-center font-medium text-emerald-400 animate-in fade-in">
+            <div className={`p-2 rounded-lg text-[11px] font-medium leading-relaxed animate-in fade-in ${
+              extractError
+                ? isDark ? 'bg-rose-950/40 border border-rose-900/50 text-rose-300' : 'bg-rose-50 border border-rose-200 text-rose-700'
+                : isDark ? 'bg-emerald-950/30 border border-emerald-900/40 text-emerald-300' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+            }`}>
               {extractStatus}
-            </p>
+            </div>
           )}
 
           <p className={`text-[10px] leading-tight ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-            Semua memori aktif di bawah otomatis diinjeksikan ke otak AI saat roleplay, sehingga karakter tidak akan pernah lupa meskipun chat sangat panjang.
+            AI otomatis memperbarui fakta, mempertahankan peristiwa & janji aktif, dan menghapus peristiwa/janji yang sudah selesai untuk menghemat token.
           </p>
         </div>
 
@@ -287,7 +339,7 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
               <Brain className="w-8 h-8 text-zinc-600" />
               <p className="font-semibold text-xs text-zinc-400">Belum ada memori peristiwa yang dicatat.</p>
               <p className={`text-[11px] max-w-xs ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                Klik &quot;Ekstrak Memori Otomatis&quot; di atas atau pin pesan penting di chat dengan ikon 📌.
+                Klik &quot;Sinkronisasi & Ekstrak Memori Otomatis&quot; di atas atau pin pesan penting di chat dengan ikon 📌.
               </p>
             </div>
           ) : (
@@ -295,6 +347,7 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
               const meta = CATEGORY_MAP[mem.category] || CATEGORY_MAP.event;
               const Icon = meta.icon;
               const isEditing = editingId === mem.id;
+              const isManual = mem.source === 'manual';
 
               return (
                 <div
@@ -354,17 +407,44 @@ export function MemoryDrawer({ character, persona }: MemoryDrawerProps) {
                   ) : (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium border ${meta.color}`}>
                             <Icon className="w-2.5 h-2.5" />
                             <span>{meta.label}</span>
                           </span>
+
+                          {isManual ? (
+                            <span
+                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                                isDark
+                                  ? 'bg-zinc-800/80 text-zinc-300 border-zinc-700'
+                                  : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                              }`}
+                              title="Memori manual (Dilindungi dari penghapusan otomatis AI)"
+                            >
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Manual</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                                isDark
+                                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                              title="Diekstrak & disinkronkan otomatis oleh AI"
+                            >
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>Auto</span>
+                            </span>
+                          )}
+
                           <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                             {new Date(mem.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleToggleEnabled(mem.id, mem.enabled)}

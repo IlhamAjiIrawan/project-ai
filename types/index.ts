@@ -43,6 +43,12 @@ export interface Character {
   topK?: number;
   repetitionPenalty?: number;
 
+  // Memory & Context Budget Overrides
+  contextLimit?: number;
+  ltmContextBudget?: number;
+  embeddingContextBudget?: number;
+  chatHistoryDepth?: number;
+
   isCustom?: boolean;
   createdAt: number;
   updatedAt: number;
@@ -108,6 +114,12 @@ export interface ApiSettings {
   topA: number;
   topK: number;
   repetitionPenalty: number;
+
+  // 4 Memory & Context Window Parameters
+  contextLimit: number;
+  ltmContextBudget: number;
+  embeddingContextBudget: number;
+  chatHistoryDepth: number;
   
   // Legacy / fallback fields
   frequencyPenalty?: number;
@@ -129,8 +141,27 @@ export interface SessionMemory {
   content: string; // The remembered event, fact, or promise
   category: MemoryCategory;
   importance?: 'high' | 'medium' | 'low';
+  source?: 'manual' | 'auto';
   enabled: boolean;
   timestamp: number;
+}
+
+export interface MemoryExtractionResult {
+  add: Array<{
+    category: MemoryCategory;
+    content: string;
+    importance?: 'high' | 'medium' | 'low';
+  }>;
+  update: Array<{
+    id: string;
+    category?: MemoryCategory;
+    content: string;
+    importance?: 'high' | 'medium' | 'low';
+  }>;
+  remove: Array<{
+    id: string;
+    reason?: string;
+  }>;
 }
 
 export interface AppBackupData {

@@ -50,6 +50,7 @@ export function PinMemoryModal({ character }: PinMemoryModalProps) {
       characterId: character.id,
       content: content.trim(),
       category,
+      source: 'manual',
       enabled: true,
       timestamp: Date.now(),
     };

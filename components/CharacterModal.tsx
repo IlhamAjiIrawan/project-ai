@@ -69,6 +69,12 @@ export function CharacterModal() {
   const [topK, setTopK] = useState(40);
   const [repetitionPenalty, setRepetitionPenalty] = useState(1.1);
 
+  // 4 Memory Parameters
+  const [contextLimit, setContextLimit] = useState<number | undefined>(undefined);
+  const [ltmContextBudget, setLtmContextBudget] = useState<number | undefined>(undefined);
+  const [embeddingContextBudget, setEmbeddingContextBudget] = useState<number | undefined>(undefined);
+  const [chatHistoryDepth, setChatHistoryDepth] = useState<number | undefined>(undefined);
+
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -93,6 +99,10 @@ export function CharacterModal() {
       setTopA(editingCharacter.topA ?? 0.0);
       setTopK(editingCharacter.topK ?? 40);
       setRepetitionPenalty(editingCharacter.repetitionPenalty ?? 1.1);
+      setContextLimit(editingCharacter.contextLimit);
+      setLtmContextBudget(editingCharacter.ltmContextBudget);
+      setEmbeddingContextBudget(editingCharacter.embeddingContextBudget);
+      setChatHistoryDepth(editingCharacter.chatHistoryDepth);
     } else {
       setName('');
       setTagline('');
@@ -114,6 +124,10 @@ export function CharacterModal() {
       setTopA(0.0);
       setTopK(40);
       setRepetitionPenalty(1.1);
+      setContextLimit(undefined);
+      setLtmContextBudget(undefined);
+      setEmbeddingContextBudget(undefined);
+      setChatHistoryDepth(undefined);
     }
   }, [editingCharacter, isCharacterModalOpen]);
 
@@ -129,6 +143,10 @@ export function CharacterModal() {
         setTopA(0.20);
         setTopK(40);
         setRepetitionPenalty(1.10);
+        setContextLimit(8192);
+        setLtmContextBudget(1200);
+        setEmbeddingContextBudget(800);
+        setChatHistoryDepth(30);
         break;
       case 'creative':
         setTemperature(1.05);
@@ -138,6 +156,10 @@ export function CharacterModal() {
         setTopA(0.00);
         setTopK(60);
         setRepetitionPenalty(1.05);
+        setContextLimit(4096);
+        setLtmContextBudget(800);
+        setEmbeddingContextBudget(500);
+        setChatHistoryDepth(20);
         break;
       case 'rpg':
         setTemperature(0.70);
@@ -147,6 +169,10 @@ export function CharacterModal() {
         setTopA(0.15);
         setTopK(40);
         setRepetitionPenalty(1.12);
+        setContextLimit(6144);
+        setLtmContextBudget(1000);
+        setEmbeddingContextBudget(1000);
+        setChatHistoryDepth(24);
         break;
       case 'precise':
         setTemperature(0.40);
@@ -156,6 +182,10 @@ export function CharacterModal() {
         setTopA(0.30);
         setTopK(30);
         setRepetitionPenalty(1.00);
+        setContextLimit(3072);
+        setLtmContextBudget(400);
+        setEmbeddingContextBudget(300);
+        setChatHistoryDepth(14);
         break;
     }
   };
@@ -245,6 +275,10 @@ export function CharacterModal() {
       topA,
       topK,
       repetitionPenalty,
+      contextLimit,
+      ltmContextBudget,
+      embeddingContextBudget,
+      chatHistoryDepth,
       isCustom: true,
       createdAt: editingCharacter ? editingCharacter.createdAt : Date.now(),
       updatedAt: Date.now(),
@@ -1008,6 +1042,154 @@ export function CharacterModal() {
                   />
                   <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                     Mencegah karakter mengulang kalimat atau frasa secara monoton.
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Memory & Context Window Parameters Section */}
+              <div className={`p-4 rounded-xl border space-y-4 ${
+                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Manajemen Memori & Jendela Konteks (Override Karakter)
+                  </h3>
+                  <span className={`text-[10px] px-2 py-0.5 rounded border ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'
+                  }`}>
+                    Token Budgeting
+                  </span>
+                </div>
+
+                {/* 1. Context Limit */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      1. Context Limit (Batas Total Konteks):
+                      <span className="font-mono text-zinc-400 font-normal">
+                        {contextLimit !== undefined ? `${contextLimit} Token` : 'Default Pengaturan (4096)'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setContextLimit(contextLimit === undefined ? 4096 : undefined)}
+                      className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
+                    >
+                      {contextLimit === undefined ? 'Set Khusus' : 'Reset ke Default'}
+                    </button>
+                  </div>
+                  {contextLimit !== undefined && (
+                    <input
+                      type="range"
+                      min="2048"
+                      max="32768"
+                      step="512"
+                      value={contextLimit}
+                      onChange={(e) => setContextLimit(parseInt(e.target.value))}
+                      className="w-full cursor-pointer accent-zinc-500"
+                    />
+                  )}
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Batas total token gabungan (System Prompt + Memori + Riwayat Chat + Jawaban AI).
+                  </p>
+                </div>
+
+                {/* 2. LTM Context Budget */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      2. LTM Context Budget (Kuota Memori Peristiwa):
+                      <span className="font-mono text-zinc-400 font-normal">
+                        {ltmContextBudget !== undefined ? `${ltmContextBudget} Token` : 'Default Pengaturan (800)'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLtmContextBudget(ltmContextBudget === undefined ? 800 : undefined)}
+                      className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
+                    >
+                      {ltmContextBudget === undefined ? 'Set Khusus' : 'Reset ke Default'}
+                    </button>
+                  </div>
+                  {ltmContextBudget !== undefined && (
+                    <input
+                      type="range"
+                      min="200"
+                      max="3000"
+                      step="50"
+                      value={ltmContextBudget}
+                      onChange={(e) => setLtmContextBudget(parseInt(e.target.value))}
+                      className="w-full cursor-pointer accent-zinc-500"
+                    />
+                  )}
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Alokasi token khusus untuk memori peristiwa penting, janji, rahasia, dan relasi.
+                  </p>
+                </div>
+
+                {/* 3. Embedding Context Budget */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      3. Embedding Context Budget (Kuota World Lore / RAG):
+                      <span className="font-mono text-zinc-400 font-normal">
+                        {embeddingContextBudget !== undefined ? `${embeddingContextBudget} Token` : 'Default Pengaturan (500)'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEmbeddingContextBudget(embeddingContextBudget === undefined ? 500 : undefined)}
+                      className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
+                    >
+                      {embeddingContextBudget === undefined ? 'Set Khusus' : 'Reset ke Default'}
+                    </button>
+                  </div>
+                  {embeddingContextBudget !== undefined && (
+                    <input
+                      type="range"
+                      min="100"
+                      max="2000"
+                      step="50"
+                      value={embeddingContextBudget}
+                      onChange={(e) => setEmbeddingContextBudget(parseInt(e.target.value))}
+                      className="w-full cursor-pointer accent-zinc-500"
+                    />
+                  )}
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Alokasi token untuk entri lorebook / ensiklopedia dunia yang cocok dengan topik.
+                  </p>
+                </div>
+
+                {/* 4. Chat History Depth */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1">
+                      4. Chat History Depth (Kedalaman Riwayat Chat):
+                      <span className="font-mono text-zinc-400 font-normal">
+                        {chatHistoryDepth !== undefined ? `${chatHistoryDepth} Pesan` : 'Default Pengaturan (20)'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setChatHistoryDepth(chatHistoryDepth === undefined ? 20 : undefined)}
+                      className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
+                    >
+                      {chatHistoryDepth === undefined ? 'Set Khusus' : 'Reset ke Default'}
+                    </button>
+                  </div>
+                  {chatHistoryDepth !== undefined && (
+                    <input
+                      type="range"
+                      min="4"
+                      max="60"
+                      step="2"
+                      value={chatHistoryDepth}
+                      onChange={(e) => setChatHistoryDepth(parseInt(e.target.value))}
+                      className="w-full cursor-pointer accent-zinc-500"
+                    />
+                  )}
+                  <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Jumlah pesan terbaru yang langsung dikirimkan ke AI sebagai riwayat aktif.
                   </p>
                 </div>
               </div>

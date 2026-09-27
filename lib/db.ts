@@ -22,6 +22,12 @@ export const DEFAULT_SETTINGS: ApiSettings = {
   topA: 0.0,
   topK: 40,
   repetitionPenalty: 1.1,
+
+  // 4 Memory & Context Window Parameters
+  contextLimit: 4096,
+  ltmContextBudget: 800,
+  embeddingContextBudget: 500,
+  chatHistoryDepth: 20,
   
   frequencyPenalty: 0.0,
   presencePenalty: 0.0,

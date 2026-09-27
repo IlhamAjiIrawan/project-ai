@@ -1,4 +1,4 @@
-import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType, SessionMemory, MemoryCategory } from '@/types';
+import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType, SessionMemory, MemoryCategory, MemoryExtractionResult } from '@/types';
 import { decryptSensitiveText } from '@/lib/crypto';
 import { getRelationshipTier } from '@/lib/relationship';
 
@@ -23,13 +23,14 @@ export function estimateTokens(text: string): number {
 }
 
 /**
- * Builds smart context window from chat history within a specified token budget.
+ * Builds smart context window from chat history within a specified token budget and history depth.
  * - Always preserves the initial anchor message (greeting/scenario setup) if available.
- * - Fills the remainder of the token budget with the most recent messages.
+ * - Fills the remainder of the token budget with the most recent messages up to maxDepth.
  */
 export function buildOptimizedHistory(
   chatHistory: ChatMessage[],
-  maxHistoryTokens: number = 6000
+  maxHistoryTokens: number = 6000,
+  maxDepth: number = 20
 ): Array<{ role: 'user' | 'assistant'; content: string }> {
   if (chatHistory.length === 0) return [];
 
@@ -47,8 +48,11 @@ export function buildOptimizedHistory(
   let currentTokens = firstMsgTokens;
   const selectedRecent: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
+  // Limit how far back to look based on maxDepth
+  const startIndex = Math.max(1, formattedAll.length - maxDepth);
+
   // Iterate backwards from most recent message
-  for (let i = formattedAll.length - 1; i >= 1; i--) {
+  for (let i = formattedAll.length - 1; i >= startIndex; i--) {
     const msg = formattedAll[i];
     const tokens = estimateTokens(msg.content);
     if (currentTokens + tokens > maxHistoryTokens) {
@@ -72,12 +76,14 @@ export function constructRoleplaySystemPrompt(
   recentChatText: string = '',
   responseLength: string = 'medium',
   memories: SessionMemory[] = [],
-  affinityLevel: number = 1
+  affinityLevel: number = 1,
+  ltmContextBudget: number = 800,
+  embeddingContextBudget: number = 500
 ): string {
   const userName = userPersona?.name || 'User';
   const userBio = userPersona?.bio ? `[Profil Pemain/User: ${userPersona.name} - ${userPersona.bio}]` : '';
 
-  // Scan Lorebook if present
+  // Scan Lorebook if present and enforce embeddingContextBudget
   let activeLore = '';
   if (character.lorebook && character.lorebook.length > 0) {
     const combinedText = (recentChatText + ' ' + character.scenario).toLowerCase();
@@ -87,32 +93,61 @@ export function constructRoleplaySystemPrompt(
     });
 
     if (triggeredEntries.length > 0) {
-      activeLore = `\n[Memori / World Lore Tambahan Terkait:\n${triggeredEntries.map((e) => `- ${e.content}`).join('\n')}\n]`;
+      let loreTokenSum = 0;
+      const acceptedEntries: string[] = [];
+
+      for (const entry of triggeredEntries) {
+        const entryTokens = estimateTokens(entry.content);
+        if (loreTokenSum + entryTokens <= embeddingContextBudget) {
+          acceptedEntries.push(`- ${entry.content}`);
+          loreTokenSum += entryTokens;
+        }
+      }
+
+      if (acceptedEntries.length > 0) {
+        activeLore = `\n[Memori / World Lore Tambahan Terkait:\n${acceptedEntries.join('\n')}\n]`;
+      }
     }
   }
 
-  // Ingest dynamic session memories (episodic event memory)
+  // Ingest dynamic session memories (episodic event memory) and enforce ltmContextBudget
   let activeMemories = '';
   if (memories && memories.length > 0) {
     const enabledMemories = memories.filter((m) => m.enabled !== false);
     if (enabledMemories.length > 0) {
-      const memoryBullets = enabledMemories
-        .map((m) => {
-          const categoryTag =
-            m.category === 'promise'
-              ? 'Janji/Komitmen'
-              : m.category === 'relation'
-              ? 'Status Hubungan'
-              : m.category === 'secret'
-              ? 'Rahasia/Fakta Tersembunyi'
-              : m.category === 'fact'
-              ? 'Fakta Penting'
-              : 'Peristiwa Terjadi';
-          return `- [${categoryTag}] ${m.content.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}`;
-        })
-        .join('\n');
+      // Sort: High importance first, then newest timestamp
+      const sortedMemories = [...enabledMemories].sort((a, b) => {
+        if (a.importance === 'high' && b.importance !== 'high') return -1;
+        if (b.importance === 'high' && a.importance !== 'high') return 1;
+        return (b.timestamp || 0) - (a.timestamp || 0);
+      });
 
-      activeMemories = `\n[MEMORI PERISTIWA PENTING DARI SESI INI (JANGAN PERNAH DILUPAKAN OLEH ${character.name.toUpperCase()})]:\n${memoryBullets}\n`;
+      let ltmTokenSum = 0;
+      const acceptedMemories: string[] = [];
+
+      for (const m of sortedMemories) {
+        const categoryTag =
+          m.category === 'promise'
+            ? 'Janji/Komitmen'
+            : m.category === 'relation'
+            ? 'Status Hubungan'
+            : m.category === 'secret'
+            ? 'Rahasia/Fakta Tersembunyi'
+            : m.category === 'fact'
+            ? 'Fakta Penting'
+            : 'Peristiwa Terjadi';
+        const formattedLine = `- [${categoryTag}] ${m.content.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}`;
+        const lineTokens = estimateTokens(formattedLine);
+
+        if (ltmTokenSum + lineTokens <= ltmContextBudget) {
+          acceptedMemories.push(formattedLine);
+          ltmTokenSum += lineTokens;
+        }
+      }
+
+      if (acceptedMemories.length > 0) {
+        activeMemories = `\n[MEMORI PERISTIWA PENTING DARI SESI INI (JANGAN PERNAH DILUPAKAN OLEH ${character.name.toUpperCase()})]:\n${acceptedMemories.join('\n')}\n`;
+      }
     }
   }
 
@@ -247,18 +282,31 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const topK = character.topK ?? settings.topK ?? 40;
   const repetitionPenalty = character.repetitionPenalty ?? settings.repetitionPenalty ?? 1.1;
 
-  // Construct System Prompt
+  // Resolve 4 Memory & Context Parameters
+  const contextLimit = character.contextLimit ?? settings.contextLimit ?? 4096;
+  const ltmContextBudget = character.ltmContextBudget ?? settings.ltmContextBudget ?? 800;
+  const embeddingContextBudget = character.embeddingContextBudget ?? settings.embeddingContextBudget ?? 500;
+  const chatHistoryDepth = character.chatHistoryDepth ?? settings.chatHistoryDepth ?? 20;
+
+  // Construct System Prompt with memory budgets
   const systemPrompt = constructRoleplaySystemPrompt(
     character,
     userPersona,
     recentText,
     responseLength,
     options.memories || [],
-    options.affinityLevel || 1
+    options.affinityLevel || 1,
+    ltmContextBudget,
+    embeddingContextBudget
   );
 
-  // Format message history with smart token-budget context window
-  const historyForLLM = buildOptimizedHistory(chatHistory, 6000);
+  // Calculate available history token budget from total contextLimit
+  const systemTokens = estimateTokens(systemPrompt);
+  const userMsgTokens = estimateTokens(newUserMessage);
+  const maxHistoryTokens = Math.max(600, contextLimit - (systemTokens + maxTokens + userMsgTokens + 150));
+
+  // Format message history with smart token-budget and chatHistoryDepth
+  const historyForLLM = buildOptimizedHistory(chatHistory, maxHistoryTokens, chatHistoryDepth);
 
   // Append current user message if provided
   if (newUserMessage) {
@@ -367,18 +415,21 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
 }
 
 /**
- * Automatically extracts key events, promises, relationship developments, and secrets
- * from recent conversation messages to store into episodic session memory.
+ * Automatically consolidates and reconciles key events, relationship dynamics, promises, secrets, and facts
+ * from conversation history with existing session memory, pruning outdated items and updating facts.
  */
 export async function extractMemoriesFromChat(options: {
   character: Character;
   userPersona?: UserPersona;
   chatHistory: ChatMessage[];
+  existingMemories?: SessionMemory[];
   settings: ApiSettings;
   signal?: AbortSignal;
-}): Promise<Array<{ content: string; category: MemoryCategory }>> {
-  const { character, userPersona, chatHistory, settings, signal } = options;
-  if (chatHistory.length < 2) return [];
+}): Promise<MemoryExtractionResult> {
+  const { character, userPersona, chatHistory, existingMemories = [], settings, signal } = options;
+  if (chatHistory.length < 2) {
+    return { add: [], update: [], remove: [] };
+  }
 
   const provider: ProviderType = character.customProvider || settings.defaultProvider || 'gemini';
   const model: string =
@@ -388,27 +439,81 @@ export async function extractMemoriesFromChat(options: {
 
   const userName = userPersona?.name || 'User';
 
-  const conversationSample = chatHistory
-    .slice(-25)
+  // Format existing active memories with ID, Category, and protection flag
+  const formattedExistingMemories = existingMemories.length > 0
+    ? existingMemories.map((m) => {
+        const lockTag = m.source === 'manual' ? '[MANUAL - DILINDUNGI]' : '[AUTO]';
+        return `- [ID: ${m.id}] [Kategori: ${m.category}] ${lockTag} ${m.content}`;
+      }).join('\n')
+    : '(Belum ada memori yang tersimpan)';
+
+  // Build context depth dynamically based on settings.chatHistoryDepth without rigid 25 limit
+  const depth = Math.max(30, settings.chatHistoryDepth || 30);
+  const sampleMessages = chatHistory.slice(-depth);
+  const conversationSample = sampleMessages
     .map((m) => `${m.role === 'assistant' ? character.name : userName}: ${m.content}`)
     .join('\n\n');
 
-  const extractionPrompt = `Kamu adalah sistem analisis memori roleplay AI.
-Tugasmu: Analisis percakapan antara "${character.name}" dan "${userName}" di bawah ini.
-Ekstrak 2 sampai 5 peristiwa penting, fakta baru, janji/kesepakatan, rahasia, atau perkembangan hubungan emosional yang terjadi dalam percakapan.
+  const extractionPrompt = `Kamu adalah sistem AI Memory Consolidation & State Engine untuk roleplay interaktif antara "${character.name}" dan "${userName}".
 
-Format Output WAJIB JSON murni (array of objects) tanpa kata pengantar atau penutup apapun:
-[
-  {
-    "content": "Ringkasan peristiwa atau fakta dalam 1-2 kalimat padat",
-    "category": "event"
-  }
-]
+DAFTAR MEMORI SAAT INI DI DATABASE:
+${formattedExistingMemories}
+
+RIWAYAT PERCAKAPAN:
+${conversationSample}
+
+TUGAS UTAMA:
+Lakukan rekonsiliasi dan pembaruan memori secara cerdas, hemat token, dan ringkas dengan menerapkan 5 aturan berikut:
+
+1. PERISTIWA (category: "event"):
+   - Simpan HANYA peristiwa penting yang SEDANG TERJADI / aktif saat ini dalam plot.
+   - Jika ada peristiwa lama di daftar memori yang SUDAH SELESAI / TERLEWAT dalam percakapan, masukkan ID-nya ke daftar "remove" agar tidak membebani token.
+
+2. HUBUNGAN (category: "relation"):
+   - Fokus pada dinamika status dan perasaan hubungan SAAT INI.
+   - Perbarui (update) atau tambahkan (add) perkembangan emosional terbaru antara "${character.name}" dan "${userName}".
+
+3. JANJI (category: "promise"):
+   - Simpan HANYA janji/komitmen yang MASIH BERLAKU & belum terlaksana.
+   - Jika janji di daftar memori sudah DITEPATI / TERLAKSANA atau DIBATALKAN dalam percakapan, masukkan ID-nya ke daftar "remove".
+
+4. RAHASIA (category: "secret"):
+   - Fokus pada rahasia penting yang paling berdampak besar terhadap dinamika interaksi & alur cerita.
+
+5. FAKTA (category: "fact"):
+   - Fokus pada fakta terbaru. Perbarui (update) fakta yang sudah ada jika ada detail baru yang mengoreksi/melengkapi, atau tambahkan (add) fakta baru yang terungkap.
+
+ATURAN KESELAMATAN & FORMAT:
+- DILARANG memasukkan ID memori bertanda [MANUAL - DILINDUNGI] ke daftar "remove".
+- Setiap memori harus dirangkum padat dalam 1-2 kalimat ringkas (maksimal 25 kata per item).
+- Format Output WAJIB JSON murni (Object) tanpa markdown, tanpa teks pengantar, dan tanpa penutup:
+
+{
+  "add": [
+    {
+      "category": "event",
+      "content": "Ringkasan peristiwa/fakta padat",
+      "importance": "high"
+    }
+  ],
+  "update": [
+    {
+      "id": "mem_xxx",
+      "category": "fact",
+      "content": "Isi fakta yang telah diperbarui",
+      "importance": "medium"
+    }
+  ],
+  "remove": [
+    {
+      "id": "mem_yyy",
+      "reason": "Janji sudah ditepati dalam percakapan"
+    }
+  ]
+}
 
 Pilihan category yang valid: "event" | "relation" | "fact" | "promise" | "secret".
-
-Percakapan yang dianalisis:
-${conversationSample}`;
+Pilihan importance yang valid: "high" | "medium" | "low".`;
 
   const decryptedSettings: ApiSettings = {
     ...settings,
@@ -422,10 +527,10 @@ ${conversationSample}`;
   const payload = {
     provider,
     model,
-    systemPrompt: 'Kamu adalah asisten analisis memori yang selalu menghasilkan respon valid JSON.',
+    systemPrompt: 'Kamu adalah asisten analisis memori yang selalu menghasilkan respon valid JSON murni berbentuk object { add: [], update: [], remove: [] }.',
     messages: [{ role: 'user', content: extractionPrompt }],
-    temperature: 0.3,
-    maxTokens: 800,
+    temperature: 0.2,
+    maxTokens: 1000,
     settings: decryptedSettings,
   };
 
@@ -442,7 +547,14 @@ ${conversationSample}`;
   );
 
   if (!res.ok) {
-    throw new Error('Gagal menghubungi AI untuk mengekstrak memori.');
+    let errorMsg = '';
+    try {
+      const errJson = await res.json();
+      errorMsg = errJson.error || JSON.stringify(errJson);
+    } catch {
+      errorMsg = await res.text();
+    }
+    throw new Error(errorMsg || `Gagal menghubungi AI untuk mengekstrak memori (HTTP ${res.status}).`);
   }
 
   if (!res.body) {
@@ -481,24 +593,92 @@ ${conversationSample}`;
     }
   }
 
-  const jsonMatch = fullText.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return [];
+  const manualIdSet = new Set(
+    existingMemories.filter((m) => m.source === 'manual').map((m) => m.id)
+  );
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((item) => typeof item?.content === 'string' && item.content.trim().length > 0)
-        .map((item) => ({
-          content: item.content.trim(),
-          category: (['event', 'relation', 'fact', 'promise', 'secret'].includes(item.category)
-            ? item.category
-            : 'event') as MemoryCategory,
-        }));
+  // 1. Try parsing JSON Object structure { add, update, remove }
+  const jsonObjectMatch = fullText.match(/\{[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    try {
+      const parsed = JSON.parse(jsonObjectMatch[0]);
+      const add: MemoryExtractionResult['add'] = [];
+      const update: MemoryExtractionResult['update'] = [];
+      const remove: MemoryExtractionResult['remove'] = [];
+
+      if (Array.isArray(parsed.add)) {
+        for (const item of parsed.add) {
+          if (item?.content && typeof item.content === 'string' && item.content.trim()) {
+            const cat = (['event', 'relation', 'fact', 'promise', 'secret'].includes(item.category)
+              ? item.category
+              : 'event') as MemoryCategory;
+            add.push({
+              category: cat,
+              content: item.content.trim(),
+              importance: (['high', 'medium', 'low'].includes(item.importance) ? item.importance : 'medium') as any,
+            });
+          }
+        }
+      }
+
+      if (Array.isArray(parsed.update)) {
+        for (const item of parsed.update) {
+          if (item?.id && typeof item.id === 'string' && item?.content && typeof item.content === 'string' && item.content.trim()) {
+            const cat = (['event', 'relation', 'fact', 'promise', 'secret'].includes(item.category)
+              ? item.category
+              : undefined) as MemoryCategory | undefined;
+            update.push({
+              id: item.id.trim(),
+              category: cat,
+              content: item.content.trim(),
+              importance: (['high', 'medium', 'low'].includes(item.importance) ? item.importance : 'medium') as any,
+            });
+          }
+        }
+      }
+
+      if (Array.isArray(parsed.remove)) {
+        for (const item of parsed.remove) {
+          if (item?.id && typeof item.id === 'string') {
+            const trimmedId = item.id.trim();
+            // Client-side safety: Never allow removal of manual protected memories
+            if (!manualIdSet.has(trimmedId)) {
+              remove.push({
+                id: trimmedId,
+                reason: typeof item.reason === 'string' ? item.reason : undefined,
+              });
+            }
+          }
+        }
+      }
+
+      return { add, update, remove };
+    } catch (e) {
+      console.error('Error parsing memory reconciliation JSON:', e);
     }
-  } catch (e) {
-    console.error('Error parsing extracted memories JSON:', e);
   }
 
-  return [];
+  // 2. Fallback if model outputs raw Array of objects [ { content, category } ]
+  const jsonArrayMatch = fullText.match(/\[[\s\S]*\]/);
+  if (jsonArrayMatch) {
+    try {
+      const parsed = JSON.parse(jsonArrayMatch[0]);
+      if (Array.isArray(parsed)) {
+        const add = parsed
+          .filter((item) => typeof item?.content === 'string' && item.content.trim().length > 0)
+          .map((item) => ({
+            content: item.content.trim(),
+            category: (['event', 'relation', 'fact', 'promise', 'secret'].includes(item.category)
+              ? item.category
+              : 'event') as MemoryCategory,
+            importance: 'medium' as const,
+          }));
+        return { add, update: [], remove: [] };
+      }
+    } catch (e) {
+      console.error('Error parsing fallback memory JSON:', e);
+    }
+  }
+
+  return { add: [], update: [], remove: [] };
 }
