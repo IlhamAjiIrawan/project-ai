@@ -56,7 +56,7 @@ export function ChatMessageList({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 relative"
+      className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-4 relative"
     >
       {/* Intro Banner for the Character */}
       <div className={`text-center py-6 border-b space-y-2 max-w-md mx-auto ${

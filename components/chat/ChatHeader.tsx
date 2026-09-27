@@ -156,8 +156,8 @@ export function ChatHeader({
   };
 
   return (
-    <div className={`border-b px-4 py-2.5 flex flex-col gap-2 shrink-0 relative transition-colors ${
-      isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
+    <div className={`sticky top-0 z-20 border-b px-4 py-2.5 flex flex-col gap-2 shrink-0 backdrop-blur-md transition-colors ${
+      isDark ? 'border-zinc-800 bg-zinc-950/90' : 'border-zinc-200 bg-white/90'
     }`}>
       <div className="flex items-center justify-between gap-3">
         {/* Character Info */}

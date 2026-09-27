@@ -5,7 +5,7 @@ import { ChatInterface } from '@/components/chat/ChatInterface';
 
 export default function ChatPage() {
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
       <ChatInterface />
     </div>
   );

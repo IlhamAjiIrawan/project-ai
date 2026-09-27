@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
@@ -12,19 +11,14 @@ import {
   User,
   Settings,
   Plus,
-  Compass,
-  MessageSquare,
   Key,
   ChevronDown,
-  Users,
-  SlidersHorizontal,
   Sun,
   Moon,
 } from 'lucide-react';
 import { POPULAR_MODELS } from '@/lib/providers/types';
 
 export function Navbar() {
-  const pathname = usePathname();
   const {
     setIsCharacterModalOpen,
     setEditingCharacter,
@@ -58,21 +52,13 @@ export function Navbar() {
     Boolean(settings.openaiApiKey) ||
     Boolean(settings.customApiKey);
 
-  const navLinks = [
-    { href: '/', label: 'Dashboard', icon: Compass },
-    { href: '/chat', label: 'Chat', icon: MessageSquare },
-    { href: '/characters', label: 'Karakter', icon: Sparkles },
-    { href: '/personas', label: 'Persona', icon: Users },
-    { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
-  ];
-
   const isDark = theme === 'dark';
 
   return (
-    <header className={`sticky top-0 z-40 w-full glass-panel border-b px-4 sm:px-6 py-2.5 flex items-center justify-between transition-colors ${
+    <header className={`sticky top-0 z-40 w-full shrink-0 glass-panel border-b px-4 sm:px-6 py-2.5 flex items-center justify-between transition-colors ${
       isDark ? 'border-zinc-800/80 bg-zinc-950/80' : 'border-zinc-200 bg-white/80'
     }`}>
-      {/* Brand & Nav */}
+      {/* Brand */}
       <div className="flex items-center gap-6">
         <Link
           href="/"
@@ -91,32 +77,6 @@ export function Navbar() {
             </div>
           </div>
         </Link>
-
-        {/* View Switch / Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  isActive
-                    ? isDark
-                      ? 'bg-zinc-800 text-zinc-100 font-semibold'
-                      : 'bg-zinc-100 text-zinc-900 font-semibold'
-                    : isDark
-                      ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
-                      : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
       </div>
 
       {/* Center / Right controls */}

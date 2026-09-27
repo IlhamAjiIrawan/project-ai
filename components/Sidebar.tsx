@@ -113,7 +113,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col border-r transition-all duration-200 ${
+      className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col h-full min-h-0 shrink-0 border-r transition-all duration-200 ${
         isDark ? 'bg-zinc-950 border-zinc-800/80 text-zinc-100' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
       } ${isOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-16'}`}
     >

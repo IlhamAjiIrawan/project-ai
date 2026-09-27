@@ -37,7 +37,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-7 max-w-7xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-7 max-w-7xl mx-auto w-full">
       {/* 1. Hero & Quick Stats */}
       <HeroSection
         charactersCount={characters.length}

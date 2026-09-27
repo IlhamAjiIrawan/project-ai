@@ -323,7 +323,7 @@ export function ChatInterface() {
   };
 
   return (
-    <div className={`flex-1 flex flex-col h-[calc(100vh-53px)] relative overflow-hidden transition-colors ${
+    <div className={`flex-1 flex flex-col h-full min-h-0 relative overflow-hidden transition-colors ${
       isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'
     }`}>
       {/* Top Header */}

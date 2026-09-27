@@ -56,17 +56,17 @@ export function AppShell({ children }: AppShellProps) {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+    <div className={`h-screen max-h-screen overflow-hidden flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
       {/* Top Navbar */}
       <Navbar />
 
       {/* Main Workspace Layout with Sidebar & Content */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Collapsible Sidebar */}
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Dynamic Route Content */}
-        <main className={`flex-1 flex flex-col min-w-0 overflow-hidden relative ${isDark ? 'bg-zinc-950/40' : 'bg-white/60'}`}>
+        <main className={`flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative ${isDark ? 'bg-zinc-950/40' : 'bg-white/60'}`}>
           {children}
         </main>
       </div>

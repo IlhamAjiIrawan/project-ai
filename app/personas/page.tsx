@@ -138,7 +138,7 @@ export default function PersonasStudioPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-5xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-6 max-w-5xl mx-auto w-full">
       {/* Studio Header Banner */}
       <div className={`rounded-2xl p-6 border transition-colors ${
         isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
