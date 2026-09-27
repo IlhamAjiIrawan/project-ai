@@ -447,20 +447,30 @@ export async function extractMemoriesFromChat(options: {
       }).join('\n')
     : '(Belum ada memori yang tersimpan)';
 
-  // Build context depth dynamically based on settings.chatHistoryDepth without rigid 25 limit
+  // Build context depth dynamically based on settings.chatHistoryDepth with smart message trimming & character budgeting
+  const maxCharsBudget = 24000;
+  let currentChars = 0;
+  const sampleFormatted: string[] = [];
+
   const depth = Math.max(30, settings.chatHistoryDepth || 30);
   const sampleMessages = chatHistory.slice(-depth);
-  const conversationSample = sampleMessages
-    .map((m) => `${m.role === 'assistant' ? character.name : userName}: ${m.content}`)
-    .join('\n\n');
 
-  const extractionPrompt = `Kamu adalah sistem AI Memory Consolidation & State Engine untuk roleplay interaktif antara "${character.name}" dan "${userName}".
+  for (let i = sampleMessages.length - 1; i >= 0; i--) {
+    const m = sampleMessages[i];
+    const speaker = m.role === 'assistant' ? character.name : userName;
+    // Trim excessively long single messages (e.g. wall of text > 1200 chars) to prevent payload blowout
+    const cleanContent = m.content.length > 1200 ? m.content.substring(0, 1200) + '...' : m.content;
+    const formattedLine = `${speaker}: ${cleanContent}`;
+    if (currentChars + formattedLine.length > maxCharsBudget) {
+      break;
+    }
+    currentChars += formattedLine.length;
+    sampleFormatted.unshift(formattedLine);
+  }
 
-DAFTAR MEMORI SAAT INI DI DATABASE:
-${formattedExistingMemories}
+  const conversationSample = sampleFormatted.join('\n\n');
 
-RIWAYAT PERCAKAPAN:
-${conversationSample}
+  const systemInstruction = `Kamu adalah sistem AI Memory Consolidation & State Engine untuk roleplay interaktif antara "${character.name}" dan "${userName}".
 
 TUGAS UTAMA:
 Lakukan rekonsiliasi dan pembaruan memori secara cerdas, hemat token, dan ringkas dengan menerapkan 5 aturan berikut:
@@ -515,6 +525,14 @@ ATURAN KESELAMATAN & FORMAT:
 Pilihan category yang valid: "event" | "relation" | "fact" | "promise" | "secret".
 Pilihan importance yang valid: "high" | "medium" | "low".`;
 
+  const userPromptContent = `DAFTAR MEMORI SAAT INI DI DATABASE:
+${formattedExistingMemories}
+
+RIWAYAT PERCAKAPAN:
+${conversationSample}
+
+Instruksi: Analisis data di atas dan hasilkan output JSON murni rekonsiliasi memori { add: [], update: [], remove: [] }.`;
+
   const decryptedSettings: ApiSettings = {
     ...settings,
     geminiApiKey: await decryptSensitiveText(settings.geminiApiKey || ''),
@@ -527,8 +545,8 @@ Pilihan importance yang valid: "high" | "medium" | "low".`;
   const payload = {
     provider,
     model,
-    systemPrompt: 'Kamu adalah asisten analisis memori yang selalu menghasilkan respon valid JSON murni berbentuk object { add: [], update: [], remove: [] }.',
-    messages: [{ role: 'user', content: extractionPrompt }],
+    systemPrompt: systemInstruction,
+    messages: [{ role: 'user', content: userPromptContent }],
     temperature: 0.2,
     maxTokens: 1000,
     settings: decryptedSettings,

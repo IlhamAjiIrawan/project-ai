@@ -9,7 +9,7 @@ const VALID_PROVIDERS: ProviderType[] = ['gemini', 'openrouter', 'groq', 'openai
 const MAX_PAYLOAD_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_SYSTEM_PROMPT_LENGTH = 60000;
 const MAX_MESSAGES_COUNT = 100;
-const MAX_MESSAGE_CONTENT_LENGTH = 32000;
+const MAX_MESSAGE_CONTENT_LENGTH = 60000;
 
 interface ChatRequestBody {
   provider: ProviderType;
