@@ -122,19 +122,19 @@ export function CharacterCard({ character }: CharacterCardProps) {
           </span>
         </div>
 
-        {/* Quick Actions (Hover) */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Quick Actions (Visible on mobile, hover on desktop) */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
           <button
             onClick={handleExport}
             title="Ekspor Karakter (JSON)"
-            className="p-1.5 rounded-lg bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-black/70 hover:bg-black text-white border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleEdit}
             title="Edit Karakter"
-            className="p-1.5 rounded-lg bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-black/70 hover:bg-black text-white border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -142,7 +142,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
             <button
               onClick={handleDelete}
               title="Hapus Karakter"
-              className="p-1.5 rounded-lg bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-black/70 hover:bg-rose-600 text-white border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>

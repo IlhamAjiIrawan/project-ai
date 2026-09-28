@@ -109,8 +109,8 @@ export function PersonaModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className={`relative w-full max-w-xl max-h-[85vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border transition-colors ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className={`relative w-full h-full sm:h-auto sm:max-w-xl sm:max-h-[85vh] rounded-none sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border-0 sm:border transition-colors ${
         isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
       }`}>
         {/* Header */}

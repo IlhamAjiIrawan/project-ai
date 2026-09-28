@@ -15,8 +15,15 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const { setSettings, theme } = useAppStore();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Open sidebar by default only on desktop
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setSidebarOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -44,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
 
   if (!isInitialized) {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center space-y-3 ${theme === 'dark' ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+      <div className={`min-h-[100dvh] flex flex-col items-center justify-center space-y-3 ${theme === 'dark' ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
         <div className="w-8 h-8 rounded-full border-2 border-zinc-500 border-t-transparent animate-spin" />
         <p className="text-xs text-zinc-500 font-mono tracking-wider">
           MEMUAT APLIKASI...
@@ -56,9 +63,9 @@ export function AppShell({ children }: AppShellProps) {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`h-screen max-h-screen overflow-hidden flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
+    <div className={`h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col font-sans transition-colors duration-200 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
       {/* Top Navbar */}
-      <Navbar />
+      <Navbar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Main Workspace Layout with Sidebar & Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden relative">

@@ -17,6 +17,7 @@ import {
   FileCode,
   Check,
   Brain,
+  MoreVertical,
 } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
 import { db } from '@/lib/db';
@@ -69,6 +70,7 @@ export function ChatHeader({
   const activeMemoryCount = memories.filter((m) => m.enabled).length;
 
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
 
   const activeModel = character.customModel || settings.defaultModel;
@@ -98,6 +100,7 @@ export function ChatHeader({
     a.click();
     URL.revokeObjectURL(url);
     setExportDropdownOpen(false);
+    setMobileMenuOpen(false);
     showNotification('Diekspor sebagai .txt');
   };
 
@@ -129,6 +132,7 @@ export function ChatHeader({
     a.click();
     URL.revokeObjectURL(url);
     setExportDropdownOpen(false);
+    setMobileMenuOpen(false);
     showNotification('Diekspor sebagai .md');
   };
 
@@ -152,16 +156,17 @@ export function ChatHeader({
 
     downloadJson(`chat_${character.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`, exportData);
     setExportDropdownOpen(false);
+    setMobileMenuOpen(false);
     showNotification('Diekspor sebagai .json');
   };
 
   return (
-    <div className={`sticky top-0 z-20 border-b px-4 py-2.5 flex flex-col gap-2 shrink-0 backdrop-blur-md transition-colors ${
+    <div className={`sticky top-0 z-20 border-b px-3 sm:px-4 py-2 sm:py-2.5 flex flex-col gap-2 shrink-0 backdrop-blur-md transition-colors ${
       isDark ? 'border-zinc-800 bg-zinc-950/90' : 'border-zinc-200 bg-white/90'
     }`}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2 min-w-0">
         {/* Character Info */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Link
             href="/"
             className={`p-1.5 rounded-lg md:hidden cursor-pointer shrink-0 ${
@@ -177,10 +182,10 @@ export function ChatHeader({
               <img
                 src={character.avatar}
                 alt={character.name}
-                className="w-8 h-8 rounded-full object-cover"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
               />
             ) : (
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                 isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-700'
               }`}>
                 <Bot className="w-4 h-4" />
@@ -188,10 +193,10 @@ export function ChatHeader({
             )}
           </div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
               <h2 className="font-semibold text-xs sm:text-sm truncate">{character.name}</h2>
-              <span className={`hidden sm:inline-flex text-[10px] px-1.5 py-0.2 rounded font-mono border ${
+              <span className={`hidden md:inline-flex text-[10px] px-1.5 py-0.2 rounded font-mono border ${
                 isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-600'
               }`}>
                 {activeModel}
@@ -205,9 +210,9 @@ export function ChatHeader({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Active Persona Badge */}
+        {/* Actions Bar */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* Active Persona Badge (large screen) */}
           <button
             onClick={() => setIsPersonaModalOpen(true)}
             className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-colors ${
@@ -219,25 +224,10 @@ export function ChatHeader({
             <span className="font-medium">{persona?.name || 'Persona'}</span>
           </button>
 
-          {/* Search Toggle */}
-          {onToggleSearch && (
-            <button
-              onClick={onToggleSearch}
-              className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
-                isSearchOpen
-                  ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
-                  : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
-              }`}
-              title="Cari Pesan"
-            >
-              <Search className="w-3.5 h-3.5" />
-            </button>
-          )}
-
           {/* Relationship Level Pill */}
           <button
             onClick={() => setIsRelationshipDrawerOpen(!isRelationshipDrawerOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
               isRelationshipDrawerOpen
                 ? isDark ? 'bg-zinc-800 border-rose-500/50 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-700'
                 : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700' : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100'
@@ -252,7 +242,7 @@ export function ChatHeader({
           {/* Toggle Memory Drawer */}
           <button
             onClick={() => setIsMemoryDrawerOpen(!isMemoryDrawerOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
               isMemoryDrawerOpen
                 ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
                 : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
@@ -270,85 +260,219 @@ export function ChatHeader({
             )}
           </button>
 
-          {/* Toggle Scenario Drawer */}
-          <button
-            onClick={() => setIsScenarioDrawerOpen(!isScenarioDrawerOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-              isScenarioDrawerOpen
-                ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
-                : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
-            }`}
-            title="Skenario & Info"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Skenario</span>
-          </button>
+          {/* Desktop Actions (sm and up) */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            {/* Search Toggle */}
+            {onToggleSearch && (
+              <button
+                onClick={onToggleSearch}
+                className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
+                  isSearchOpen
+                    ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                    : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+                }`}
+                title="Cari Pesan"
+              >
+                <Search className="w-3.5 h-3.5" />
+              </button>
+            )}
 
-          {/* Export Dropdown */}
-          <div className="relative">
+            {/* Toggle Scenario Drawer */}
             <button
-              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+              onClick={() => setIsScenarioDrawerOpen(!isScenarioDrawerOpen)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                isScenarioDrawerOpen
+                  ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                  : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
               }`}
-              title="Ekspor Chat"
+              title="Skenario & Info"
             >
-              <Download className="w-3.5 h-3.5" />
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Skenario</span>
             </button>
 
-            {exportDropdownOpen && (
-              <div className={`absolute right-0 mt-2 w-48 rounded-xl p-1 shadow-xl z-50 border space-y-0.5 ${
-                isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-              }`}>
-                <div className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider border-b ${
-                  isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-100 text-zinc-400'
-                }`}>
-                  Ekspor Chat
-                </div>
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+                }`}
+                title="Ekspor Chat"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
 
-                <button
-                  onClick={handleExportMarkdown}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
-                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Markdown (.md)</span>
-                </button>
+              {exportDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setExportDropdownOpen(false)}
+                  />
+                  <div className={`absolute right-0 mt-2 w-48 rounded-xl p-1 shadow-xl z-50 border space-y-0.5 ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}>
+                    <div className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider border-b ${
+                      isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-100 text-zinc-400'
+                    }`}>
+                      Ekspor Chat
+                    </div>
 
-                <button
-                  onClick={handleExportText}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
-                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Plain Text (.txt)</span>
-                </button>
+                    <button
+                      onClick={handleExportMarkdown}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                        isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Markdown (.md)</span>
+                    </button>
 
-                <button
-                  onClick={handleExportJson}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
-                    isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
-                  }`}
-                >
-                  <FileCode className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>JSON (.json)</span>
-                </button>
-              </div>
-            )}
+                    <button
+                      onClick={handleExportText}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                        isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Plain Text (.txt)</span>
+                    </button>
+
+                    <button
+                      onClick={handleExportJson}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
+                        isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                      }`}
+                    >
+                      <FileCode className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>JSON (.json)</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Clear Session */}
+            <button
+              onClick={onClearSession}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-rose-600 hover:bg-rose-50'
+              }`}
+              title="Mulai Ulang Chat"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Clear Session */}
-          <button
-            onClick={onClearSession}
-            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-              isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-rose-600 hover:bg-rose-50'
-            }`}
-            title="Mulai Ulang Chat"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {/* Mobile More Options Menu (<sm) */}
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                mobileMenuOpen
+                  ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                  : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+              }`}
+              title="Opsi Tambahan"
+            >
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+
+            {mobileMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <div className={`absolute right-0 mt-2 w-52 rounded-xl p-1.5 shadow-2xl z-50 border space-y-1 ${
+                  isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                }`}>
+                  <div className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider border-b ${
+                    isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-100 text-zinc-400'
+                  }`}>
+                    Menu Chat
+                  </div>
+
+                  {onToggleSearch && (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onToggleSearch();
+                      }}
+                      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs cursor-pointer ${
+                        isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                      }`}
+                    >
+                      <Search className="w-4 h-4 text-zinc-400" />
+                      <span>{isSearchOpen ? 'Tutup Pencarian' : 'Cari Pesan'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setIsScenarioDrawerOpen(!isScenarioDrawerOpen);
+                    }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs cursor-pointer ${
+                      isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4 text-zinc-400" />
+                    <span>Skenario & Pengetahuan</span>
+                  </button>
+
+                  <div className={`my-1 border-t ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`} />
+
+                  <div className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Ekspor Riwayat
+                  </div>
+
+                  <button
+                    onClick={handleExportMarkdown}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs cursor-pointer ${
+                      isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-zinc-400" />
+                    <span>Markdown (.md)</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportText}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs cursor-pointer ${
+                      isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-zinc-400" />
+                    <span>Plain Text (.txt)</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportJson}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs cursor-pointer ${
+                      isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <FileCode className="w-4 h-4 text-zinc-400" />
+                    <span>JSON (.json)</span>
+                  </button>
+
+                  <div className={`my-1 border-t ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`} />
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onClearSession();
+                    }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Mulai Ulang Chat</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

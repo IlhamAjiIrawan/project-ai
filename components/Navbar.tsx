@@ -15,10 +15,17 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  Menu,
+  X,
 } from 'lucide-react';
 import { POPULAR_MODELS } from '@/lib/providers/types';
 
-export function Navbar() {
+interface NavbarProps {
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export function Navbar({ sidebarOpen, onToggleSidebar }: NavbarProps) {
   const {
     setIsCharacterModalOpen,
     setEditingCharacter,
@@ -55,14 +62,28 @@ export function Navbar() {
   const isDark = theme === 'dark';
 
   return (
-    <header className={`sticky top-0 z-40 w-full shrink-0 glass-panel border-b px-4 sm:px-6 py-2.5 flex items-center justify-between transition-colors ${
+    <header className={`sticky top-0 z-40 w-full shrink-0 glass-panel border-b px-3 sm:px-6 py-2 flex items-center justify-between transition-colors ${
       isDark ? 'border-zinc-800/80 bg-zinc-950/80' : 'border-zinc-200 bg-white/80'
     }`}>
-      {/* Brand */}
-      <div className="flex items-center gap-6">
+      {/* Brand & Mobile Hamburger */}
+      <div className="flex items-center gap-2 sm:gap-6">
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            aria-label={sidebarOpen ? "Tutup Menu" : "Buka Menu"}
+            className={`p-2 rounded-lg border md:hidden transition-colors cursor-pointer ${
+              isDark
+                ? 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800'
+                : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100'
+            }`}
+          >
+            {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        )}
+
         <Link
           href="/"
-          className="flex items-center gap-2.5 group text-left cursor-pointer focus:outline-none"
+          className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none"
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
             isDark ? 'bg-zinc-800 text-zinc-100 group-hover:bg-zinc-700' : 'bg-zinc-900 text-zinc-50 group-hover:bg-zinc-800'
@@ -137,9 +158,14 @@ export function Navbar() {
           </button>
 
           {personaDropdownOpen && (
-            <div className={`absolute right-0 mt-2 w-56 rounded-xl p-1.5 shadow-xl z-50 border ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-            }`}>
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setPersonaDropdownOpen(false)}
+              />
+              <div className={`absolute right-0 mt-2 w-56 rounded-xl p-1.5 shadow-xl z-50 border ${
+                isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}>
               <div className={`px-2 py-1.5 border-b flex items-center justify-between ${
                 isDark ? 'border-zinc-800 text-zinc-400' : 'border-zinc-100 text-zinc-500'
               }`}>
@@ -187,6 +213,7 @@ export function Navbar() {
                 ))}
               </div>
             </div>
+            </>
           )}
         </div>
 

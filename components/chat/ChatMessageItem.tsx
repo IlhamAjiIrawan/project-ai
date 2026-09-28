@@ -238,12 +238,12 @@ export function ChatMessageItem({
           <ChatMessageFormatter content={currentContent} />
         )}
 
-        {/* Hover Toolbar */}
+        {/* Action Toolbar (visible on mobile, hover on desktop) */}
         {!isEditing && (
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 pt-1">
+          <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center flex-wrap gap-1 pt-1.5">
             <button
               onClick={handleCopy}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'
               }`}
               title="Salin Pesan"
@@ -253,7 +253,7 @@ export function ChatMessageItem({
 
             <button
               onClick={handleSpeak}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 isSpeaking
                   ? 'text-zinc-100'
                   : isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'
@@ -268,7 +268,7 @@ export function ChatMessageItem({
                 setEditContent(currentContent);
                 setIsEditing(true);
               }}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'
               }`}
               title="Edit Pesan"
@@ -278,7 +278,7 @@ export function ChatMessageItem({
 
             <button
               onClick={() => setPinMemoryModalData({ messageContent: currentContent, role: message.role })}
-              className={`p-1 rounded text-xs transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 isDark ? 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800' : 'text-zinc-500 hover:text-amber-600 hover:bg-zinc-200'
               }`}
               title="Simpan ke Memori Karakter"
@@ -289,8 +289,8 @@ export function ChatMessageItem({
             {isAssistant && isLastAssistantMessage && !isGenerating && onReroll && (
               <button
                 onClick={() => onReroll(message.id)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
-                  isDark ? 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                  isDark ? 'text-zinc-300 hover:text-zinc-100 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800' : 'text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200'
                 }`}
                 title="Reroll Respon"
               >
@@ -302,7 +302,7 @@ export function ChatMessageItem({
             {onDelete && (
               <button
                 onClick={() => onDelete(message.id)}
-                className="p-1 rounded hover:text-rose-500 text-zinc-400 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg hover:text-rose-500 text-zinc-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                 title="Hapus Pesan"
               >
                 <Trash2 className="w-3.5 h-3.5" />

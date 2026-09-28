@@ -290,8 +290,8 @@ export function CharacterModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className={`relative w-full max-w-3xl max-h-[85vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border transition-colors ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className={`relative w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] rounded-none sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border-0 sm:border transition-colors ${
         isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
       }`}>
         {/* Header */}
@@ -1198,7 +1198,7 @@ export function CharacterModal() {
         </div>
 
         {/* Footer */}
-        <div className={`p-4 sm:p-5 border-t flex items-center justify-end gap-2 ${
+        <div className={`p-3.5 sm:p-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t flex items-center justify-end gap-2 shrink-0 ${
           isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-100 bg-white'
         }`}>
           <button

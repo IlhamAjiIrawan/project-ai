@@ -33,7 +33,8 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
   }, [input]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault();
       handleSend();
     }
@@ -73,7 +74,7 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
   };
 
   return (
-    <div className={`p-3 md:p-4 border-t shrink-0 space-y-2 transition-colors ${
+    <div className={`p-2.5 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t shrink-0 space-y-2 transition-colors ${
       isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
     }`}>
       {/* Quick Action Chips */}
@@ -83,10 +84,10 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
             key={idx}
             type="button"
             onClick={() => handleInsertQuickAction(action.text)}
-            className={`whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer shrink-0 ${
+            className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-xs font-mono border transition-colors cursor-pointer shrink-0 ${
               isDark
-                ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-                : 'bg-zinc-100 border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200'
+                ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800'
+                : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-200'
             }`}
           >
             {action.label}
@@ -106,7 +107,7 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Tulis pesan atau *narasi peran*... (Enter kirim, Shift+Enter baris baru)"
+          placeholder="Tulis pesan atau *narasi peran*..."
           disabled={disabled}
           className={`flex-1 max-h-40 min-h-[36px] bg-transparent text-xs sm:text-sm px-2.5 py-1.5 resize-none focus:outline-none scrollbar-none ${
             isDark ? 'text-zinc-100 placeholder:text-zinc-500' : 'text-zinc-900 placeholder:text-zinc-400'
@@ -118,7 +119,7 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
           <button
             onClick={onStopGeneration}
             type="button"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shrink-0"
             title="Hentikan pembuatan respon"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
@@ -129,14 +130,14 @@ export function ChatInput({ onSendMessage, onStopGeneration, disabled }: ChatInp
             onClick={handleSend}
             disabled={!input.trim() || disabled}
             type="button"
-            className={`flex items-center justify-center w-8 h-8 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0 ${
+            className={`flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shrink-0 ${
               isDark
                 ? 'bg-zinc-100 text-zinc-950 hover:bg-white'
                 : 'bg-zinc-900 text-white hover:bg-zinc-800'
             }`}
             title="Kirim pesan"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-4 h-4" />
           </button>
         )}
       </div>
