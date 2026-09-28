@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const VALID_PROVIDERS: ProviderType[] = ['gemini', 'openrouter', 'groq', 'openai', 'custom'];
 const MAX_PAYLOAD_SIZE = 2 * 1024 * 1024; // 2MB
