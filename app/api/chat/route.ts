@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Rate Limiting Check (30 requests per minute per IP)
     const clientIp = getClientIp(req);
-    const rateLimit = checkRateLimit(clientIp, { windowMs: 60000, maxRequests: 30 });
+    const rateLimit = await checkRateLimit(clientIp, { windowMs: 60000, maxRequests: 30 });
     if (!rateLimit.success) {
       return NextResponse.json(
         {

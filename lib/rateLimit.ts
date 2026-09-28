@@ -1,24 +1,59 @@
 /**
- * In-memory sliding window rate limiter for Next.js API routes.
+ * Sliding window rate limiter untuk Next.js API routes.
+ *
+ * - Production (Vercel): menggunakan Upstash Redis agar rate limit
+ *   berfungsi lintas serverless instances.
+ * - Development / fallback: menggunakan in-memory Map jika env vars
+ *   Upstash tidak dikonfigurasi.
  */
+
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+// ─── Upstash Redis Rate Limiter (Production) ─────────────────────────────────
+
+let upstashRatelimit: Ratelimit | null = null;
+
+function getUpstashRatelimit(): Ratelimit | null {
+  if (upstashRatelimit) return upstashRatelimit;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    // Env vars belum diset — gunakan fallback in-memory (local dev)
+    return null;
+  }
+
+  try {
+    const redis = new Redis({ url, token });
+    upstashRatelimit = new Ratelimit({
+      redis,
+      // Sliding window: 30 request per 60 detik per identifier
+      limiter: Ratelimit.slidingWindow(30, '60 s'),
+      prefix: 'rp_rl', // Namespace key di Redis
+      analytics: false,
+    });
+    return upstashRatelimit;
+  } catch (err) {
+    console.warn('[RateLimit] Gagal inisialisasi Upstash Redis, fallback ke in-memory:', err);
+    return null;
+  }
+}
+
+// ─── In-Memory Fallback (Local Dev) ──────────────────────────────────────────
 
 interface RateLimitRecord {
   timestamps: number[];
 }
 
-interface RateLimitOptions {
-  windowMs?: number; // Time window in milliseconds (default: 60,000ms = 1 minute)
-  maxRequests?: number; // Maximum requests allowed per window (default: 30)
-}
-
 const ipStore = new Map<string, RateLimitRecord>();
 
-// Cleanup stale records every 5 minutes to prevent memory leaks
+// Cleanup stale records setiap 5 menit untuk mencegah memory leak
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
     for (const [key, record] of ipStore.entries()) {
-      // Remove timestamps older than 10 minutes
       record.timestamps = record.timestamps.filter((ts) => now - ts < 600000);
       if (record.timestamps.length === 0) {
         ipStore.delete(key);
@@ -27,18 +62,11 @@ if (typeof setInterval !== 'undefined') {
   }, 300000);
 }
 
-export function checkRateLimit(
+function checkRateLimitInMemory(
   identifier: string,
-  options: RateLimitOptions = {}
-): {
-  success: boolean;
-  limit: number;
-  remaining: number;
-  resetTime: number;
-  retryAfterSeconds: number;
-} {
-  const windowMs = options.windowMs || 60000;
-  const maxRequests = options.maxRequests || 30;
+  windowMs: number,
+  maxRequests: number
+): { success: boolean; remaining: number; resetTime: number; retryAfterSeconds: number } {
   const now = Date.now();
   const windowStart = now - windowMs;
 
@@ -48,36 +76,80 @@ export function checkRateLimit(
     ipStore.set(identifier, record);
   }
 
-  // Filter timestamps within the current window
   record.timestamps = record.timestamps.filter((ts) => ts > windowStart);
-
   const requestCount = record.timestamps.length;
 
   if (requestCount >= maxRequests) {
     const oldestTimestamp = record.timestamps[0] || now;
     const resetTime = oldestTimestamp + windowMs;
     const retryAfterSeconds = Math.max(1, Math.ceil((resetTime - now) / 1000));
-
-    return {
-      success: false,
-      limit: maxRequests,
-      remaining: 0,
-      resetTime,
-      retryAfterSeconds,
-    };
+    return { success: false, remaining: 0, resetTime, retryAfterSeconds };
   }
 
-  // Record this request
   record.timestamps.push(now);
-
   return {
     success: true,
-    limit: maxRequests,
     remaining: maxRequests - record.timestamps.length,
     resetTime: now + windowMs,
     retryAfterSeconds: 0,
   };
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+interface RateLimitOptions {
+  windowMs?: number;    // default: 60_000 ms
+  maxRequests?: number; // default: 30
+}
+
+export async function checkRateLimit(
+  identifier: string,
+  options: RateLimitOptions = {}
+): Promise<{
+  success: boolean;
+  limit: number;
+  remaining: number;
+  resetTime: number;
+  retryAfterSeconds: number;
+}> {
+  const windowMs = options.windowMs ?? 60000;
+  const maxRequests = options.maxRequests ?? 30;
+
+  // Coba Upstash Redis terlebih dahulu
+  const rl = getUpstashRatelimit();
+  if (rl) {
+    try {
+      const result = await rl.limit(identifier);
+      const retryAfterSeconds = result.success
+        ? 0
+        : Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
+
+      return {
+        success: result.success,
+        limit: result.limit,
+        remaining: result.remaining,
+        resetTime: result.reset,
+        retryAfterSeconds,
+      };
+    } catch (err) {
+      // Jika Redis error (misal: quota habis), fail-open agar user tetap bisa pakai app
+      console.error('[RateLimit] Upstash error, fail-open:', err);
+      return {
+        success: true,
+        limit: maxRequests,
+        remaining: 1,
+        resetTime: Date.now() + windowMs,
+        retryAfterSeconds: 0,
+      };
+    }
+  }
+
+  // Fallback ke in-memory (local dev)
+  const result = checkRateLimitInMemory(identifier, windowMs, maxRequests);
+  return { limit: maxRequests, ...result };
+}
+
+// ─── IP Extraction ────────────────────────────────────────────────────────────
 
 export function getClientIp(req: Request): string {
   const forwardedFor = req.headers.get('x-forwarded-for');
