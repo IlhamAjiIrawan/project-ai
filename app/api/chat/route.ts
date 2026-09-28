@@ -12,6 +12,21 @@ const MAX_SYSTEM_PROMPT_LENGTH = 60000;
 const MAX_MESSAGES_COUNT = 100;
 const MAX_MESSAGE_CONTENT_LENGTH = 60000;
 
+// Daftar pola URL internal/cloud-metadata yang diblokir (cegah SSRF)
+const SSRF_BLOCKED_PATTERNS: RegExp[] = [
+  /^https?:\/\/(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\])(:\d+)?/i,
+  /^https?:\/\/169\.254\.\d+\.\d+/i,          // AWS/GCP/Azure metadata
+  /^https?:\/\/10\.\d+\.\d+\.\d+/i,            // RFC1918 10.x
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/i, // RFC1918 172.16-31.x
+  /^https?:\/\/192\.168\.\d+\.\d+/i,           // RFC1918 192.168.x
+  /^https?:\/\/100\.64\.\d+\.\d+/i,            // Carrier-grade NAT
+  /^https?:\/\/metadata\.google\.internal/i,    // GCE metadata
+];
+
+function isBlockedBySSRF(url: string): boolean {
+  return SSRF_BLOCKED_PATTERNS.some((pattern) => pattern.test(url));
+}
+
 interface ChatRequestBody {
   provider: ProviderType;
   model: string;
@@ -187,10 +202,18 @@ export async function POST(req: NextRequest) {
       );
     } else if (provider === 'custom') {
       const rawBaseUrl = settings.customBaseUrl?.trim() || 'http://localhost:11434/v1';
-      
+
       if (!rawBaseUrl.startsWith('http://') && !rawBaseUrl.startsWith('https://')) {
         return NextResponse.json(
           { error: 'Custom Base URL harus menggunakan protokol http:// atau https://' },
+          { status: 400 }
+        );
+      }
+
+      // Blokir URL internal/metadata untuk mencegah SSRF
+      if (isBlockedBySSRF(rawBaseUrl)) {
+        return NextResponse.json(
+          { error: 'Custom Base URL mengarah ke alamat jaringan internal yang tidak diizinkan.' },
           { status: 400 }
         );
       }
@@ -244,10 +267,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Provider "${provider}" tidak didukung.` }, { status: 400 });
     }
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses permintaan AI.';
+    // Log detail error di server, kirim pesan generik ke client (hindari info leak)
     console.error('Chat API Route Error:', err);
     return NextResponse.json(
-      { error: errorMsg },
+      { error: 'Terjadi kesalahan internal server. Silakan coba beberapa saat lagi.' },
       { status: 500 }
     );
   }
@@ -378,12 +401,13 @@ async function handleOpenRouter(
   if (repetitionPenalty > 1.0) payload.repetition_penalty = repetitionPenalty;
 
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://project-ai-puce.vercel.app';
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
+      'HTTP-Referer': appUrl,
       'X-Title': 'Roleplay AI Hub',
     },
     body: JSON.stringify(payload),
