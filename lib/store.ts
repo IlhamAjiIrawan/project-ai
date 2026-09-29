@@ -18,6 +18,8 @@ interface AppState {
   setIsMemoryDrawerOpen: (open: boolean) => void;
   isRelationshipDrawerOpen: boolean;
   setIsRelationshipDrawerOpen: (open: boolean) => void;
+  isAuthorsNoteDrawerOpen: boolean;
+  setIsAuthorsNoteDrawerOpen: (open: boolean) => void;
   pinMemoryModalData: { messageContent: string; role?: 'user' | 'assistant' | 'system' } | null;
   setPinMemoryModalData: (data: { messageContent: string; role?: 'user' | 'assistant' | 'system' } | null) => void;
 
@@ -73,6 +75,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsMemoryDrawerOpen: (open) => set({ isMemoryDrawerOpen: open }),
   isRelationshipDrawerOpen: false,
   setIsRelationshipDrawerOpen: (open) => set({ isRelationshipDrawerOpen: open }),
+  isAuthorsNoteDrawerOpen: false,
+  setIsAuthorsNoteDrawerOpen: (open) => set({ isAuthorsNoteDrawerOpen: open }),
   pinMemoryModalData: null,
   setPinMemoryModalData: (data) => set({ pinMemoryModalData: data }),
 

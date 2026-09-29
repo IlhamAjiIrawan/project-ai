@@ -20,7 +20,7 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   {
     id: 'stranger',
     minLevel: 1,
-    maxLevel: 10,
+    maxLevel: 5,
     title: 'Orang Asing',
     subTitle: 'Menjaga jarak & waspada',
     badgeColor: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
@@ -32,8 +32,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'acquaintance',
-    minLevel: 11,
-    maxLevel: 20,
+    minLevel: 6,
+    maxLevel: 15,
     title: 'Mulai Kenal',
     subTitle: 'Sopan & mulai membuka obrolan',
     badgeColor: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
@@ -45,8 +45,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'friend',
-    minLevel: 21,
-    maxLevel: 35,
+    minLevel: 16,
+    maxLevel: 25,
     title: 'Teman',
     subTitle: 'Nyaman bercanda & berbagi cerita',
     badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -58,8 +58,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'close_friend',
-    minLevel: 36,
-    maxLevel: 50,
+    minLevel: 26,
+    maxLevel: 35,
     title: 'Teman Baik',
     subTitle: 'Saling peduli & saling membantu',
     badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
@@ -71,8 +71,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'best_friend',
-    minLevel: 51,
-    maxLevel: 65,
+    minLevel: 36,
+    maxLevel: 50,
     title: 'Sahabat',
     subTitle: 'Kepercayaan mendalam & saling melindungi',
     badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -84,8 +84,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'true_confidant',
-    minLevel: 66,
-    maxLevel: 75,
+    minLevel: 51,
+    maxLevel: 60,
     title: 'Sahabat Sejati',
     subTitle: 'Koneksi batin yang tak terpisahkan',
     badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
@@ -97,8 +97,8 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'crush',
-    minLevel: 76,
-    maxLevel: 85,
+    minLevel: 61,
+    maxLevel: 75,
     title: 'Mulai Suka / Gebetan',
     subTitle: 'Percikan asmara & salah tingkah manis',
     badgeColor: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
@@ -110,7 +110,7 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
   },
   {
     id: 'lovers',
-    minLevel: 86,
+    minLevel: 76,
     maxLevel: 95,
     title: 'Pacar / Kekasih',
     subTitle: 'Kasih sayang mendalam & komitmen romantis',

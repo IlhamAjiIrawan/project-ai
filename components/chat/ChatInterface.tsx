@@ -12,10 +12,11 @@ import { ScenarioDrawer } from './ScenarioDrawer';
 import { MemoryDrawer } from './MemoryDrawer';
 import { PinMemoryModal } from './PinMemoryModal';
 import { RelationshipDrawer } from './RelationshipDrawer';
-import { generateRoleplayResponse } from '@/lib/providers/engine';
+import { AuthorsNoteDrawer } from './AuthorsNoteDrawer';
+import { generateRoleplayResponse, extractMemoriesFromChat } from '@/lib/providers/engine';
 import { calculateAffinityProgress } from '@/lib/relationship';
 import { ChatMessage, ChatSession } from '@/types';
-import { Bot } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 
 export function ChatInterface() {
   const {
@@ -32,6 +33,8 @@ export function ChatInterface() {
     settings,
     theme,
   } = useAppStore();
+
+  const [autoMemoryToast, setAutoMemoryToast] = useState<string | null>(null);
 
   const characters = useLiveQuery(() => db.characters.toArray(), []) || [];
   const personas = useLiveQuery(() => db.personas.toArray(), []) || [];
@@ -180,6 +183,8 @@ export function ChatInterface() {
         settings,
         memories: sessionMemories,
         affinityLevel: currentLevel,
+        authorsNote: session?.authorsNote,
+        authorsNoteEnabled: session?.authorsNoteEnabled,
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -208,6 +213,92 @@ export function ChatInterface() {
         affinityExp: affinityProgress.newExp,
         relationshipTitle: affinityProgress.newTier.title,
       });
+
+      // Background Auto-Memory Consolidation (Passive & Non-blocking)
+      const isAutoMemoryActive = settings.autoMemoryEnabled !== false;
+      const interval = Math.max(4, settings.autoMemoryInterval || 10);
+      const totalMsgCount = allMessages.length + 2; // user + assistant newly added
+      const lastCount = session?.lastAutoMemoryMessageCount || 0;
+
+      if (isAutoMemoryActive && totalMsgCount - lastCount >= interval && totalMsgCount >= 6) {
+        // Run in background asynchronously without blocking UI
+        (async () => {
+          try {
+            const currentMemories = await db.sessionMemories.where('sessionId').equals(selectedSessionId).toArray();
+            const updatedHistory = await db.chatMessages.where('sessionId').equals(selectedSessionId).sortBy('timestamp');
+
+            const result = await extractMemoriesFromChat({
+              character,
+              userPersona: persona,
+              chatHistory: updatedHistory,
+              existingMemories: currentMemories,
+              settings,
+            });
+
+            let changed = false;
+
+            // Apply Removals
+            if (result.remove && result.remove.length > 0) {
+              for (const rem of result.remove) {
+                const existing = currentMemories.find((m) => m.id === rem.id);
+                if (existing && existing.source !== 'manual') {
+                  await db.sessionMemories.delete(rem.id);
+                  changed = true;
+                }
+              }
+            }
+
+            // Apply Updates
+            if (result.update && result.update.length > 0) {
+              for (const up of result.update) {
+                const existing = currentMemories.find((m) => m.id === up.id);
+                if (existing) {
+                  await db.sessionMemories.update(up.id, {
+                    content: up.content,
+                    category: up.category || existing.category,
+                    importance: up.importance || existing.importance,
+                  });
+                  changed = true;
+                }
+              }
+            }
+
+            // Apply Additions
+            if (result.add && result.add.length > 0) {
+              for (const add of result.add) {
+                const isDup = currentMemories.some(
+                  (m) => m.content.toLowerCase().trim() === add.content.toLowerCase().trim()
+                );
+                if (!isDup) {
+                  await db.sessionMemories.put({
+                    id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                    sessionId: selectedSessionId,
+                    characterId: character.id,
+                    content: add.content,
+                    category: add.category,
+                    importance: add.importance || 'medium',
+                    source: 'auto',
+                    enabled: true,
+                    timestamp: Date.now(),
+                  });
+                  changed = true;
+                }
+              }
+            }
+
+            await db.chatSessions.update(selectedSessionId, {
+              lastAutoMemoryMessageCount: totalMsgCount,
+            });
+
+            if (changed) {
+              setAutoMemoryToast('🧠 Memori karakter telah diperbarui otomatis di latar belakang');
+              setTimeout(() => setAutoMemoryToast(null), 3500);
+            }
+          } catch (autoErr) {
+            console.warn('Background auto-memory consolidation notice:', autoErr);
+          }
+        })();
+      }
     } catch (err: unknown) {
       const error = err as Error;
       if (error?.name !== 'AbortError') {
@@ -247,6 +338,8 @@ export function ChatInterface() {
         settings,
         memories: sessionMemories,
         affinityLevel: currentLevel,
+        authorsNote: session?.authorsNote,
+        authorsNoteEnabled: session?.authorsNoteEnabled,
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -364,8 +457,19 @@ export function ChatInterface() {
       {/* Relationship Drawer */}
       <RelationshipDrawer character={character} persona={persona} session={session} />
 
+      {/* Author's Note / Plot Director Drawer */}
+      <AuthorsNoteDrawer session={session} character={character} />
+
       {/* Pin Memory Quick Modal */}
       <PinMemoryModal character={character} />
+
+      {/* Passive Background Auto-Memory Toast Notification */}
+      {autoMemoryToast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-2xl bg-zinc-900/90 border border-amber-500/40 text-amber-200 text-xs font-medium backdrop-blur-md shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>{autoMemoryToast}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -870,6 +870,50 @@ export function SettingsModal() {
                     Jumlah pesan terbaru yang langsung dikirimkan ke AI sebagai riwayat aktif.
                   </p>
                 </div>
+
+                {/* 5. Auto Memory Consolidation */}
+                <div className={`p-3 rounded-lg border space-y-2.5 ${
+                  isDark ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-xs flex items-center gap-1.5">
+                        <span>✨ Konsolidasi Memori Otomatis (Background)</span>
+                      </h4>
+                      <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        Mengekstrak peristiwa, janji, dan fakta baru secara pasif di latar belakang
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.autoMemoryEnabled ?? true}
+                      onChange={(e) => setForm({ ...form, autoMemoryEnabled: e.target.checked })}
+                      className="w-4 h-4 rounded cursor-pointer accent-amber-500"
+                    />
+                  </div>
+
+                  {(form.autoMemoryEnabled ?? true) && (
+                    <div className="space-y-1 pt-1 border-t border-zinc-800/50">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[11px] font-medium text-zinc-300">
+                          Interval Pemicu: <span className="font-mono text-amber-400">{form.autoMemoryInterval ?? 10} Pesan</span>
+                        </span>
+                        <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          Setiap {form.autoMemoryInterval ?? 10} pesan baru
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="4"
+                        max="24"
+                        step="2"
+                        value={form.autoMemoryInterval ?? 10}
+                        onChange={(e) => setForm({ ...form, autoMemoryInterval: parseInt(e.target.value) })}
+                        className="w-full cursor-pointer accent-amber-500"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Stream toggle */}

@@ -5,6 +5,7 @@ import { Character, ChatMessage, UserPersona } from '@/types';
 import { ChatMessageItem } from './ChatMessageItem';
 import { ChatMessageFormatter } from './ChatMessageFormatter';
 import { useAppStore } from '@/lib/store';
+import { extractMoodFromText } from '@/lib/mood';
 import { ArrowDown, Bot } from 'lucide-react';
 
 interface ChatMessageListProps {
@@ -97,37 +98,48 @@ export function ChatMessageList({
       ))}
 
       {/* Streaming Active Bubble */}
-      {isGenerating && activeStreamingMessage && (
-        <div className={`flex gap-3 p-3 sm:p-4 rounded-xl border mr-3 sm:mr-10 ${
-          isDark ? 'bg-zinc-950 border-zinc-700' : 'bg-white border-zinc-300 shadow-sm'
-        }`}>
-          <div className="shrink-0 pt-0.5">
-            {character.avatar ? (
-              <img
-                src={character.avatar}
-                alt={character.name}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-            ) : (
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
-                isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-200 text-zinc-700'
-              }`}>
-                <Bot className="w-3.5 h-3.5" />
+      {isGenerating && activeStreamingMessage && (() => {
+        const { cleanText: cleanStreamingText, moodInfo: streamingMoodInfo } = extractMoodFromText(activeStreamingMessage);
+        return (
+          <div className={`flex gap-3 p-3 sm:p-4 rounded-xl border mr-3 sm:mr-10 ${
+            isDark ? 'bg-zinc-950 border-zinc-700' : 'bg-white border-zinc-300 shadow-sm'
+          }`}>
+            <div className="shrink-0 pt-0.5">
+              {character.avatar ? (
+                <img
+                  src={character.avatar}
+                  alt={character.name}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                  isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-200 text-zinc-700'
+                }`}>
+                  <Bot className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold">{character.name}</span>
+                {streamingMoodInfo && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide shadow-sm animate-fade-in ${streamingMoodInfo.badgeClass}`}
+                  >
+                    <span>{streamingMoodInfo.emoji}</span>
+                    <span className="capitalize">{streamingMoodInfo.label}</span>
+                  </span>
+                )}
+                <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Mengetik...</span>
               </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">{character.name}</span>
-              <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Mengetik...</span>
-            </div>
-            <div>
-              <ChatMessageFormatter content={activeStreamingMessage} />
-              <span className="streaming-cursor" />
+              <div>
+                <ChatMessageFormatter content={cleanStreamingText} />
+                <span className="streaming-cursor" />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div ref={bottomRef} className="h-2" />
 

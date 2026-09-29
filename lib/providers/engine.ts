@@ -10,6 +10,8 @@ export interface GenerateRoleplayOptions {
   settings: ApiSettings;
   memories?: SessionMemory[];
   affinityLevel?: number;
+  authorsNote?: string;
+  authorsNoteEnabled?: boolean;
   onChunk?: (chunk: string) => void;
   signal?: AbortSignal;
 }
@@ -49,7 +51,7 @@ export function buildOptimizedHistory(
   const selectedRecent: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
   // Limit how far back to look based on maxDepth
-  const startIndex = Math.max(1, formattedAll.length - maxDepth);
+  const startIndex = Math.max(1, formattedAll.length - depth(maxDepth));
 
   // Iterate backwards from most recent message
   for (let i = formattedAll.length - 1; i >= startIndex; i--) {
@@ -70,6 +72,10 @@ export function buildOptimizedHistory(
   return selectedRecent;
 }
 
+function depth(d: number) {
+  return Math.max(1, d);
+}
+
 export function constructRoleplaySystemPrompt(
   character: Character,
   userPersona?: UserPersona,
@@ -78,7 +84,9 @@ export function constructRoleplaySystemPrompt(
   memories: SessionMemory[] = [],
   affinityLevel: number = 1,
   ltmContextBudget: number = 800,
-  embeddingContextBudget: number = 500
+  embeddingContextBudget: number = 500,
+  authorsNote?: string,
+  authorsNoteEnabled: boolean = false
 ): string {
   const userName = userPersona?.name || 'User';
   const userBio = userPersona?.bio ? `[Profil Pemain/User: ${userPersona.name} - ${userPersona.bio}]` : '';
@@ -162,6 +170,18 @@ Status Hubungan: ${tierInfo.title} (${tierInfo.subTitle})
 Panduan Sikap & Perlakuan terhadap ${userName}:
 ${relationshipBehavior}\n`;
 
+  // Author's Note / Plot Director Block
+  let authorsNoteBlock = '';
+  if (authorsNoteEnabled && authorsNote && authorsNote.trim()) {
+    const formattedNote = authorsNote
+      .trim()
+      .replace(/\{\{char\}\}/gi, character.name)
+      .replace(/\{\{user\}\}/gi, userName);
+    authorsNoteBlock = `\n[CATATAN SUTRADARA / AUTHOR'S NOTE (PANDUAN ALUR PLOT SAAT INI)]:
+${formattedNote}
+*(Instruksi Pengarah Cerita: Jadikan panduan di atas sebagai prioritas arah kejadian, kejutan situasi, atau perkembangan adegan untuk balasan ini.)*\n`;
+  }
+
   // Length guide
   let lengthInstruction = 'Gaya Panjang Respon: Sedang (2-3 paragraf naratif seimbang antara aksi dan dialog).';
   if (responseLength === 'short') {
@@ -204,6 +224,8 @@ ${activeLore}
 
 ${activeMemories}
 
+${authorsNoteBlock}
+
 ${exampleDialogueText}
 
 [ATURAN PENULISAN FORMAT ROLEPLAY]
@@ -212,7 +234,8 @@ ${exampleDialogueText}
 3. Tuliskan tindakan, bahasa tubuh, ekspresi, dan narasi atmosferik di dalam tanda bintang: *contoh tindakan atau desahan nafas*.
 4. Tuliskan kata-kata yang diucapkan langsung dalam tanda kutip: "contoh ucapan".
 5. Tanggapi dengan gaya penulisan novel interaktif yang hidup, dinamis, dan tidak kaku.
-6. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.`.trim();
+6. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.
+7. Di baris paling akhir balasan, selalu sertakan tag status suasana hati/emosi sesaat ${character.name} dalam format persis: [Mood: <Nama Emosi>] (Contoh: [Mood: Tersipu], [Mood: Senang], [Mood: Marah], [Mood: Cemas], [Mood: Tenang], [Mood: Kagum], [Mood: Gugup], [Mood: Sedih], [Mood: Penasaran], dll).`.trim();
 }
 
 /**
@@ -288,7 +311,7 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const embeddingContextBudget = character.embeddingContextBudget ?? settings.embeddingContextBudget ?? 500;
   const chatHistoryDepth = character.chatHistoryDepth ?? settings.chatHistoryDepth ?? 20;
 
-  // Construct System Prompt with memory budgets
+    // Construct System Prompt with memory budgets & author's note
   const systemPrompt = constructRoleplaySystemPrompt(
     character,
     userPersona,
@@ -297,7 +320,9 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     options.memories || [],
     options.affinityLevel || 1,
     ltmContextBudget,
-    embeddingContextBudget
+    embeddingContextBudget,
+    options.authorsNote,
+    options.authorsNoteEnabled
   );
 
   // Calculate available history token budget from total contextLimit

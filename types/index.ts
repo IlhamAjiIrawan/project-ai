@@ -92,6 +92,13 @@ export interface ChatSession {
   affinityLevel?: number; // 1 to 100 (default 1)
   affinityExp?: number;   // 0 to 100 progress to next level
   relationshipTitle?: string;
+  
+  // Author's Note / Plot Director
+  authorsNote?: string;
+  authorsNoteEnabled?: boolean;
+  
+  // Auto Memory Consolidation Tracker
+  lastAutoMemoryMessageCount?: number;
 }
 
 export interface ApiSettings {
@@ -120,6 +127,10 @@ export interface ApiSettings {
   ltmContextBudget: number;
   embeddingContextBudget: number;
   chatHistoryDepth: number;
+
+  // Auto Memory Consolidation
+  autoMemoryEnabled: boolean;
+  autoMemoryInterval: number; // Interval in messages (e.g. 8-10 messages)
   
   // Legacy / fallback fields
   frequencyPenalty?: number;

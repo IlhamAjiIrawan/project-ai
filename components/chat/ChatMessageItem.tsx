@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
+import { extractMoodFromText } from '@/lib/mood';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -52,19 +53,24 @@ export function ChatMessageItem({
   const currentSwipeIdx = message.currentSwipeIndex ?? swipes.length - 1;
   const currentContent = swipes[currentSwipeIdx] || message.content;
 
+  // Extract dynamic mood badge & clean content
+  const { cleanText, moodInfo } = isAssistant
+    ? extractMoodFromText(currentContent)
+    : { cleanText: currentContent, moodInfo: null };
+
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(currentContent);
+  const [editContent, setEditContent] = useState(cleanText);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     if (!isEditing) {
-      setEditContent(currentContent);
+      setEditContent(cleanText);
     }
-  }, [currentContent, isEditing]);
+  }, [cleanText, isEditing]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(currentContent);
+    navigator.clipboard.writeText(cleanText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -78,8 +84,8 @@ export function ChatMessageItem({
       return;
     }
 
-    const cleanText = currentContent.replace(/\*[^*]+\*/g, '').replace(/["]/g, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText || currentContent);
+    const speakableText = cleanText.replace(/\*[^*]+\*/g, '').replace(/["]/g, '');
+    const utterance = new SpeechSynthesisUtterance(speakableText || cleanText);
 
     if (settings.ttsVoice) {
       const voices = window.speechSynthesis.getVoices();
@@ -162,11 +168,23 @@ export function ChatMessageItem({
       {/* Message Content */}
       <div className="flex-1 min-w-0 space-y-1">
         {/* Header info */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold">
               {isUser ? persona?.name || 'Kamu' : character.name}
             </span>
+
+            {/* Dynamic Mood Badge */}
+            {isAssistant && moodInfo && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide shadow-sm transition-all hover:scale-105 ${moodInfo.badgeClass}`}
+                title={`Suasana hati saat ini: ${moodInfo.label}`}
+              >
+                <span>{moodInfo.emoji}</span>
+                <span className="capitalize">{moodInfo.label}</span>
+              </span>
+            )}
+
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
               {formatDate(message.timestamp)}
             </span>
@@ -235,7 +253,7 @@ export function ChatMessageItem({
             </div>
           </div>
         ) : (
-          <ChatMessageFormatter content={currentContent} />
+          <ChatMessageFormatter content={cleanText} />
         )}
 
         {/* Action Toolbar (visible on mobile, hover on desktop) */}

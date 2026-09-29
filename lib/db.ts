@@ -28,6 +28,10 @@ export const DEFAULT_SETTINGS: ApiSettings = {
   ltmContextBudget: 800,
   embeddingContextBudget: 500,
   chatHistoryDepth: 20,
+
+  // Auto Memory Consolidation
+  autoMemoryEnabled: true,
+  autoMemoryInterval: 10,
   
   frequencyPenalty: 0.0,
   presencePenalty: 0.0,

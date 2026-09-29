@@ -17,6 +17,7 @@ import {
   FileCode,
   Check,
   Brain,
+  Clapperboard,
   MoreVertical,
 } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
@@ -50,6 +51,8 @@ export function ChatHeader({
     setIsMemoryDrawerOpen,
     isRelationshipDrawerOpen,
     setIsRelationshipDrawerOpen,
+    isAuthorsNoteDrawerOpen,
+    setIsAuthorsNoteDrawerOpen,
     setIsPersonaModalOpen,
     selectedSessionId,
     settings,
@@ -260,6 +263,23 @@ export function ChatHeader({
             )}
           </button>
 
+          {/* Toggle Author's Note / Plot Director */}
+          <button
+            onClick={() => setIsAuthorsNoteDrawerOpen(!isAuthorsNoteDrawerOpen)}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+              isAuthorsNoteDrawerOpen || (session?.authorsNoteEnabled && session?.authorsNote)
+                ? isDark ? 'bg-indigo-950/80 border-indigo-500/50 text-indigo-300' : 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+            }`}
+            title="Pengarah Plot / Author's Note (Instruksi Skenario Khusus)"
+          >
+            <Clapperboard className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Plot</span>
+            {session?.authorsNoteEnabled && session?.authorsNote && (
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+            )}
+          </button>
+
           {/* Desktop Actions (sm and up) */}
           <div className="hidden sm:flex items-center gap-1.5">
             {/* Search Toggle */}
@@ -407,6 +427,22 @@ export function ChatHeader({
                       <span>{isSearchOpen ? 'Tutup Pencarian' : 'Cari Pesan'}</span>
                     </button>
                   )}
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setIsAuthorsNoteDrawerOpen(!isAuthorsNoteDrawerOpen);
+                    }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs cursor-pointer ${
+                      isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    <Clapperboard className="w-4 h-4 text-indigo-400" />
+                    <span className="flex-1">Pengarah Plot (Author&apos;s Note)</span>
+                    {session?.authorsNoteEnabled && session?.authorsNote && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                    )}
+                  </button>
 
                   <button
                     onClick={() => {
