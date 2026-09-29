@@ -83,8 +83,8 @@ export function constructRoleplaySystemPrompt(
   responseLength: string = 'medium',
   memories: SessionMemory[] = [],
   affinityLevel: number = 1,
-  ltmContextBudget: number = 800,
-  embeddingContextBudget: number = 500,
+  ltmContextBudget: number = 500,
+  embeddingContextBudget: number = 250,
   authorsNote?: string,
   authorsNoteEnabled: boolean = false
 ): string {
@@ -123,10 +123,15 @@ export function constructRoleplaySystemPrompt(
   if (memories && memories.length > 0) {
     const enabledMemories = memories.filter((m) => m.enabled !== false);
     if (enabledMemories.length > 0) {
-      // Sort: High importance first, then newest timestamp
+      // Sort: importance → category criticality → newest timestamp
+      // promise & relation are most critical for narrative consistency in tight budgets
+      const categoryPriority: Record<string, number> = { promise: 1, relation: 2, secret: 3, fact: 4, event: 5 };
+      const importancePriority: Record<string, number> = { high: 0, medium: 1, low: 2 };
       const sortedMemories = [...enabledMemories].sort((a, b) => {
-        if (a.importance === 'high' && b.importance !== 'high') return -1;
-        if (b.importance === 'high' && a.importance !== 'high') return 1;
+        const impDiff = (importancePriority[a.importance ?? 'medium'] ?? 1) - (importancePriority[b.importance ?? 'medium'] ?? 1);
+        if (impDiff !== 0) return impDiff;
+        const catDiff = (categoryPriority[a.category ?? ''] ?? 5) - (categoryPriority[b.category ?? ''] ?? 5);
+        if (catDiff !== 0) return catDiff;
         return (b.timestamp || 0) - (a.timestamp || 0);
       });
 
@@ -171,12 +176,17 @@ Panduan Sikap & Perlakuan terhadap ${userName}:
 ${relationshipBehavior}\n`;
 
   // Author's Note / Plot Director Block
+  // Capped at 150 tokens to prevent budget overflow in tight context windows
+  const MAX_AUTHORS_NOTE_TOKENS = 150;
   let authorsNoteBlock = '';
   if (authorsNoteEnabled && authorsNote && authorsNote.trim()) {
-    const formattedNote = authorsNote
+    let formattedNote = authorsNote
       .trim()
       .replace(/\{\{char\}\}/gi, character.name)
       .replace(/\{\{user\}\}/gi, userName);
+    if (estimateTokens(formattedNote) > MAX_AUTHORS_NOTE_TOKENS) {
+      formattedNote = formattedNote.substring(0, MAX_AUTHORS_NOTE_TOKENS * 4);
+    }
     authorsNoteBlock = `\n[CATATAN SUTRADARA / AUTHOR'S NOTE (PANDUAN ALUR PLOT SAAT INI)]:
 ${formattedNote}
 *(Instruksi Pengarah Cerita: Jadikan panduan di atas sebagai prioritas arah kejadian, kejutan situasi, atau perkembangan adegan untuk balasan ini.)*\n`;
@@ -203,9 +213,15 @@ ${formattedNote}
     scenarioText = `[Skenario & Latar Tempat: ${scenarioText.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}]`;
   }
 
+  // Skip example dialogue when enough episodic memories exist — the model can
+  // already learn the character's style from real conversation history.
+  // This saves 100–300 tokens in tight 4096-token budgets.
+  const hasEnoughMemories = memories.filter((m) => m.enabled !== false).length >= 3;
   let exampleDialogueText = character.exampleDialogue || '';
-  if (exampleDialogueText) {
+  if (exampleDialogueText && !hasEnoughMemories) {
     exampleDialogueText = `[Contoh Gaya Bahasa & Dialog:\n${exampleDialogueText.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}\n]`;
+  } else {
+    exampleDialogueText = '';
   }
 
   return `[PERAN UTAMA & INSTRUKSI ROLEPLAY]
@@ -328,7 +344,10 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   // Calculate available history token budget from total contextLimit
   const systemTokens = estimateTokens(systemPrompt);
   const userMsgTokens = estimateTokens(newUserMessage);
-  const maxHistoryTokens = Math.max(600, contextLimit - (systemTokens + maxTokens + userMsgTokens + 150));
+  // Guarantee at least 20% of contextLimit for chat history (e.g. 819 tokens for 4096 limit)
+  // This prevents system prompt bloat from starving the conversation history.
+  const minHistoryGuard = Math.floor(contextLimit * 0.20);
+  const maxHistoryTokens = Math.max(minHistoryGuard, contextLimit - (systemTokens + maxTokens + userMsgTokens + 150));
 
   // Format message history with smart token-budget and chatHistoryDepth
   const historyForLLM = buildOptimizedHistory(chatHistory, maxHistoryTokens, chatHistoryDepth);
