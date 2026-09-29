@@ -23,6 +23,8 @@ import { POPULAR_MODELS } from '@/lib/providers/types';
 import { processImageFile } from '@/lib/utils';
 
 const PRESET_AVATARS = [
+  '/avatars/Hanako.png',
+  '/avatars/Ako.png',
   '/avatars/professor_niyaniya.png',
   '/avatars/sparkle.png',
   'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80',
