@@ -323,8 +323,8 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
 
   // Resolve 4 Memory & Context Parameters
   const contextLimit = character.contextLimit ?? settings.contextLimit ?? 4096;
-  const ltmContextBudget = character.ltmContextBudget ?? settings.ltmContextBudget ?? 800;
-  const embeddingContextBudget = character.embeddingContextBudget ?? settings.embeddingContextBudget ?? 500;
+  const ltmContextBudget = character.ltmContextBudget ?? settings.ltmContextBudget ?? 500;
+  const embeddingContextBudget = character.embeddingContextBudget ?? settings.embeddingContextBudget ?? 250;
   const chatHistoryDepth = character.chatHistoryDepth ?? settings.chatHistoryDepth ?? 20;
 
     // Construct System Prompt with memory budgets & author's note

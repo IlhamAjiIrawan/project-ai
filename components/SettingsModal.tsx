@@ -801,10 +801,10 @@ export function SettingsModal() {
                   <div className="flex justify-between text-xs">
                     <span className="font-semibold flex items-center gap-1">
                       2. LTM Context Budget (Kuota Memori Peristiwa):
-                      <span className="font-mono text-zinc-400 font-normal">{form.ltmContextBudget ?? 800} Token</span>
+                      <span className="font-mono text-zinc-400 font-normal">{form.ltmContextBudget ?? 500} Token</span>
                     </span>
                     <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                      ~{Math.round((form.ltmContextBudget ?? 800) / 40)} butir memori
+                      ~{Math.round((form.ltmContextBudget ?? 500) / 40)} butir memori
                     </span>
                   </div>
                   <input
@@ -812,7 +812,7 @@ export function SettingsModal() {
                     min="200"
                     max="3000"
                     step="50"
-                    value={form.ltmContextBudget ?? 800}
+                    value={form.ltmContextBudget ?? 500}
                     onChange={(e) => setForm({ ...form, ltmContextBudget: parseInt(e.target.value) })}
                     className="w-full cursor-pointer accent-zinc-500"
                   />
@@ -826,10 +826,10 @@ export function SettingsModal() {
                   <div className="flex justify-between text-xs">
                     <span className="font-semibold flex items-center gap-1">
                       3. Embedding Context Budget (Kuota World Lore / RAG):
-                      <span className="font-mono text-zinc-400 font-normal">{form.embeddingContextBudget ?? 500} Token</span>
+                      <span className="font-mono text-zinc-400 font-normal">{form.embeddingContextBudget ?? 250} Token</span>
                     </span>
                     <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                      ~{Math.round((form.embeddingContextBudget ?? 500) / 60)} entri lore
+                      ~{Math.round((form.embeddingContextBudget ?? 250) / 60)} entri lore
                     </span>
                   </div>
                   <input
@@ -837,7 +837,7 @@ export function SettingsModal() {
                     min="100"
                     max="2000"
                     step="50"
-                    value={form.embeddingContextBudget ?? 500}
+                    value={form.embeddingContextBudget ?? 250}
                     onChange={(e) => setForm({ ...form, embeddingContextBudget: parseInt(e.target.value) })}
                     className="w-full cursor-pointer accent-zinc-500"
                   />

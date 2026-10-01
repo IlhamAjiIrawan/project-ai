@@ -1102,12 +1102,12 @@ export function CharacterModal() {
                     <span className="font-semibold flex items-center gap-1">
                       2. LTM Context Budget (Kuota Memori Peristiwa):
                       <span className="font-mono text-zinc-400 font-normal">
-                        {ltmContextBudget !== undefined ? `${ltmContextBudget} Token` : 'Default Pengaturan (800)'}
+                        {ltmContextBudget !== undefined ? `${ltmContextBudget} Token` : 'Default Pengaturan (500)'}
                       </span>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setLtmContextBudget(ltmContextBudget === undefined ? 800 : undefined)}
+                      onClick={() => setLtmContextBudget(ltmContextBudget === undefined ? 500 : undefined)}
                       className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
                     >
                       {ltmContextBudget === undefined ? 'Set Khusus' : 'Reset ke Default'}
@@ -1135,12 +1135,12 @@ export function CharacterModal() {
                     <span className="font-semibold flex items-center gap-1">
                       3. Embedding Context Budget (Kuota World Lore / RAG):
                       <span className="font-mono text-zinc-400 font-normal">
-                        {embeddingContextBudget !== undefined ? `${embeddingContextBudget} Token` : 'Default Pengaturan (500)'}
+                        {embeddingContextBudget !== undefined ? `${embeddingContextBudget} Token` : 'Default Pengaturan (250)'}
                       </span>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setEmbeddingContextBudget(embeddingContextBudget === undefined ? 500 : undefined)}
+                      onClick={() => setEmbeddingContextBudget(embeddingContextBudget === undefined ? 250 : undefined)}
                       className={`text-[10px] cursor-pointer hover:underline ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}
                     >
                       {embeddingContextBudget === undefined ? 'Set Khusus' : 'Reset ke Default'}

@@ -25,8 +25,8 @@ export const DEFAULT_SETTINGS: ApiSettings = {
 
   // 4 Memory & Context Window Parameters
   contextLimit: 4096,
-  ltmContextBudget: 800,
-  embeddingContextBudget: 500,
+  ltmContextBudget: 500,
+  embeddingContextBudget: 250,
   chatHistoryDepth: 20,
 
   // Auto Memory Consolidation
