@@ -23,6 +23,8 @@ import { POPULAR_MODELS } from '@/lib/providers/types';
 import { processImageFile } from '@/lib/utils';
 
 const PRESET_AVATARS = [
+  '/avatars/Aura.png',
+  '/avatars/Noa.png',
   '/avatars/Hanako.png',
   '/avatars/Ako.png',
   '/avatars/professor_niyaniya.png',
