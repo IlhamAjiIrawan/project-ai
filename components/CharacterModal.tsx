@@ -30,14 +30,7 @@ const PRESET_AVATARS = [
   '/avatars/Ako.png',
   '/avatars/professor_niyaniya.png',
   '/avatars/sparkle.png',
-  'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+  '/avatars/Aiko.png',
 ];
 
 export function CharacterModal() {
@@ -333,8 +326,8 @@ export function CharacterModal() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${isActive
-                    ? isDark ? 'border-zinc-100 text-zinc-100 font-semibold' : 'border-zinc-900 text-zinc-900 font-semibold'
-                    : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                  ? isDark ? 'border-zinc-100 text-zinc-100 font-semibold' : 'border-zinc-900 text-zinc-900 font-semibold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
                   }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -418,8 +411,8 @@ export function CharacterModal() {
                       type="button"
                       onClick={() => setAvatarInputMode('upload')}
                       className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'upload'
-                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
-                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
                         }`}
                     >
                       Upload File
@@ -428,8 +421,8 @@ export function CharacterModal() {
                       type="button"
                       onClick={() => setAvatarInputMode('url')}
                       className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'url'
-                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
-                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
                         }`}
                     >
                       URL Link
@@ -438,8 +431,8 @@ export function CharacterModal() {
                       type="button"
                       onClick={() => setAvatarInputMode('presets')}
                       className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'presets'
-                          ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
-                          : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
+                        ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
+                        : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
                         }`}
                     >
                       Preset
@@ -470,10 +463,10 @@ export function CharacterModal() {
                     onDrop={handleAvatarDrop}
                     onClick={() => fileInputRef.current?.click()}
                     className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${isDragOverAvatar
-                        ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg'
-                        : isDark
-                          ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
-                          : 'border-zinc-300 bg-zinc-100 hover:border-zinc-400'
+                      ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg'
+                      : isDark
+                        ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                        : 'border-zinc-300 bg-zinc-100 hover:border-zinc-400'
                       }`}
                     title="Klik atau Drag & Drop gambar untuk upload foto profil"
                   >
@@ -513,10 +506,10 @@ export function CharacterModal() {
                         onDragLeave={() => setIsDragOverAvatar(false)}
                         onDrop={handleAvatarDrop}
                         className={`p-3 rounded-xl border border-dashed flex flex-col sm:flex-row items-center justify-between gap-2.5 transition-colors ${isDragOverAvatar
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : isDark
-                              ? 'border-zinc-800 bg-zinc-900/50'
-                              : 'border-zinc-200 bg-zinc-50'
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : isDark
+                            ? 'border-zinc-800 bg-zinc-900/50'
+                            : 'border-zinc-200 bg-zinc-50'
                           }`}
                       >
                         <div className="text-center sm:text-left">
@@ -530,8 +523,8 @@ export function CharacterModal() {
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingAvatar}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer shrink-0 ${isDark
-                              ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700'
-                              : 'bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-100'
+                            ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700'
+                            : 'bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-100'
                             }`}
                         >
                           <Upload className="w-3.5 h-3.5" />
@@ -565,8 +558,8 @@ export function CharacterModal() {
                               type="button"
                               onClick={() => setAvatar(presetUrl)}
                               className={`w-8 h-8 rounded-lg overflow-hidden border transition-all shrink-0 cursor-pointer ${avatar === presetUrl
-                                  ? isDark ? 'border-white scale-110 shadow' : 'border-zinc-900 scale-110 shadow'
-                                  : 'border-transparent opacity-60 hover:opacity-100'
+                                ? isDark ? 'border-white scale-110 shadow' : 'border-zinc-900 scale-110 shadow'
+                                : 'border-transparent opacity-60 hover:opacity-100'
                                 }`}
                             >
                               <img src={presetUrl} alt="preset" className="w-full h-full object-cover" />
@@ -879,8 +872,8 @@ export function CharacterModal() {
                         type="button"
                         onClick={() => setResponseLength(len.id as ResponseLengthType | '')}
                         className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${responseLength === len.id
-                            ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
-                            : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                          ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                          : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
                           }`}
                       >
                         <p className="text-xs font-semibold">{len.label}</p>
