@@ -23,7 +23,8 @@ import { POPULAR_MODELS } from '@/lib/providers/types';
 import { processImageFile } from '@/lib/utils';
 
 const PRESET_AVATARS = [
-  '/avatars/Aura.png',
+  '/avatars/hutao.png',
+  '/avatars/furina.png',
   '/avatars/Noa.png',
   '/avatars/Hanako.png',
   '/avatars/Ako.png',
@@ -295,9 +296,8 @@ export function CharacterModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className={`relative w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] rounded-none sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border-0 sm:border transition-colors ${
-        isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-      }`}>
+      <div className={`relative w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] rounded-none sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border-0 sm:border transition-colors ${isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+        }`}>
         {/* Header */}
         <div className={`p-4 sm:p-5 border-b flex items-center justify-between ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`}>
           <div>
@@ -317,9 +317,8 @@ export function CharacterModal() {
         </div>
 
         {/* Tab Navigation */}
-        <div className={`flex items-center gap-1 px-4 sm:px-5 pt-2.5 border-b overflow-x-auto scrollbar-none ${
-          isDark ? 'border-zinc-800' : 'border-zinc-100'
-        }`}>
+        <div className={`flex items-center gap-1 px-4 sm:px-5 pt-2.5 border-b overflow-x-auto scrollbar-none ${isDark ? 'border-zinc-800' : 'border-zinc-100'
+          }`}>
           {[
             { id: 'basic', label: '1. Profil Dasar', icon: User },
             { id: 'personality', label: '2. Kepribadian', icon: Bot },
@@ -333,11 +332,10 @@ export function CharacterModal() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
-                  isActive
+                className={`flex items-center gap-1.5 pb-2.5 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${isActive
                     ? isDark ? 'border-zinc-100 text-zinc-100 font-semibold' : 'border-zinc-900 text-zinc-900 font-semibold'
                     : 'border-transparent text-zinc-400 hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
@@ -360,9 +358,8 @@ export function CharacterModal() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Contoh: Kaelen sang Pemburu"
-                    className={`w-full px-3 py-2 rounded-xl border ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
+                    className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
                   />
                 </div>
 
@@ -371,9 +368,8 @@ export function CharacterModal() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
-                    className={`w-full px-3 py-2 rounded-xl border cursor-pointer ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
+                    className={`w-full px-3 py-2 rounded-xl border cursor-pointer ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
                   >
                     <option value="scifi">Sci-Fi / Cyberpunk</option>
                     <option value="fantasy">High Fantasy</option>
@@ -394,9 +390,8 @@ export function CharacterModal() {
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                   placeholder="Contoh: Penyihir es dari kerajaan utara"
-                  className={`w-full px-3 py-2 rounded-xl border ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
 
@@ -407,9 +402,8 @@ export function CharacterModal() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Latar belakang, motif, dan detail penampilan..."
-                  className={`w-full px-3 py-2 rounded-xl border resize-none ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border resize-none ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
 
@@ -423,33 +417,30 @@ export function CharacterModal() {
                     <button
                       type="button"
                       onClick={() => setAvatarInputMode('upload')}
-                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                        avatarInputMode === 'upload'
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'upload'
                           ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
                           : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
+                        }`}
                     >
                       Upload File
                     </button>
                     <button
                       type="button"
                       onClick={() => setAvatarInputMode('url')}
-                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                        avatarInputMode === 'url'
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'url'
                           ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
                           : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
+                        }`}
                     >
                       URL Link
                     </button>
                     <button
                       type="button"
                       onClick={() => setAvatarInputMode('presets')}
-                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                        avatarInputMode === 'presets'
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${avatarInputMode === 'presets'
                           ? isDark ? 'bg-zinc-800 text-zinc-100 font-medium' : 'bg-zinc-200 text-zinc-900 font-medium'
                           : isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
+                        }`}
                     >
                       Preset
                     </button>
@@ -478,13 +469,12 @@ export function CharacterModal() {
                     onDragLeave={() => setIsDragOverAvatar(false)}
                     onDrop={handleAvatarDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
-                      isDragOverAvatar
+                    className={`relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${isDragOverAvatar
                         ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg'
                         : isDark
-                        ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
-                        : 'border-zinc-300 bg-zinc-100 hover:border-zinc-400'
-                    }`}
+                          ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
+                          : 'border-zinc-300 bg-zinc-100 hover:border-zinc-400'
+                      }`}
                     title="Klik atau Drag & Drop gambar untuk upload foto profil"
                   >
                     {isUploadingAvatar ? (
@@ -522,13 +512,12 @@ export function CharacterModal() {
                         }}
                         onDragLeave={() => setIsDragOverAvatar(false)}
                         onDrop={handleAvatarDrop}
-                        className={`p-3 rounded-xl border border-dashed flex flex-col sm:flex-row items-center justify-between gap-2.5 transition-colors ${
-                          isDragOverAvatar
+                        className={`p-3 rounded-xl border border-dashed flex flex-col sm:flex-row items-center justify-between gap-2.5 transition-colors ${isDragOverAvatar
                             ? 'border-blue-500 bg-blue-500/10'
                             : isDark
-                            ? 'border-zinc-800 bg-zinc-900/50'
-                            : 'border-zinc-200 bg-zinc-50'
-                        }`}
+                              ? 'border-zinc-800 bg-zinc-900/50'
+                              : 'border-zinc-200 bg-zinc-50'
+                          }`}
                       >
                         <div className="text-center sm:text-left">
                           <p className="text-xs font-medium">Upload File dari Komputer</p>
@@ -540,11 +529,10 @@ export function CharacterModal() {
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingAvatar}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer shrink-0 ${
-                            isDark
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer shrink-0 ${isDark
                               ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700'
                               : 'bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-100'
-                          }`}
+                            }`}
                         >
                           <Upload className="w-3.5 h-3.5" />
                           <span>Pilih File Gambar</span>
@@ -559,9 +547,8 @@ export function CharacterModal() {
                           value={avatar}
                           onChange={(e) => setAvatar(e.target.value)}
                           placeholder="https://example.com/avatar.jpg"
-                          className={`w-full px-3 py-2 rounded-xl border text-xs ${
-                            isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                          }`}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                            }`}
                         />
                         <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                           Masukkan tautan langsung gambar (Direct Image URL).
@@ -577,11 +564,10 @@ export function CharacterModal() {
                               key={idx}
                               type="button"
                               onClick={() => setAvatar(presetUrl)}
-                              className={`w-8 h-8 rounded-lg overflow-hidden border transition-all shrink-0 cursor-pointer ${
-                                avatar === presetUrl
+                              className={`w-8 h-8 rounded-lg overflow-hidden border transition-all shrink-0 cursor-pointer ${avatar === presetUrl
                                   ? isDark ? 'border-white scale-110 shadow' : 'border-zinc-900 scale-110 shadow'
                                   : 'border-transparent opacity-60 hover:opacity-100'
-                              }`}
+                                }`}
                             >
                               <img src={presetUrl} alt="preset" className="w-full h-full object-cover" />
                             </button>
@@ -603,9 +589,8 @@ export function CharacterModal() {
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
                   placeholder="Cyberpunk, Netrunner, Hacker"
-                  className={`w-full px-3 py-2 rounded-xl border ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
             </div>
@@ -613,9 +598,8 @@ export function CharacterModal() {
 
           {activeTab === 'personality' && (
             <div className="space-y-3.5">
-              <div className={`p-2.5 rounded-xl border text-xs ${
-                isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-600'
-              }`}>
+              <div className={`p-2.5 rounded-xl border text-xs ${isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-600'
+                }`}>
                 Tips: Gunakan <code>{'{{char}}'}</code> untuk nama karakter dan <code>{'{{user}}'}</code> untuk nama pemain.
               </div>
 
@@ -628,9 +612,8 @@ export function CharacterModal() {
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   placeholder="Kamu adalah {{char}}. Kepribadianmu: tenang, logis, tidak suka basa-basi..."
-                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
 
@@ -643,9 +626,8 @@ export function CharacterModal() {
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
                   placeholder="*Melihatmu melangkah masuk.* 'Selamat datang, {{user}}.'"
-                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
             </div>
@@ -660,9 +642,8 @@ export function CharacterModal() {
                   value={scenario}
                   onChange={(e) => setScenario(e.target.value)}
                   placeholder="Di sebuah kafe di sudut kota saat hujan..."
-                  className={`w-full px-3 py-2 rounded-xl border text-xs ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
 
@@ -675,9 +656,8 @@ export function CharacterModal() {
                   value={exampleDialogue}
                   onChange={(e) => setExampleDialogue(e.target.value)}
                   placeholder="<START>&#10;{{user}}: 'Bisa bantu aku?'&#10;{{char}}: *Tersenyum.* 'Tentu, apa yang bisa kubantu?'"
-                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                    }`}
                 />
               </div>
             </div>
@@ -695,9 +675,8 @@ export function CharacterModal() {
                 <button
                   type="button"
                   onClick={handleAddLoreEntry}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border cursor-pointer ${
-                    isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200'
-                  }`}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border cursor-pointer ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-200 text-zinc-800 hover:bg-zinc-200'
+                    }`}
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Tambah
@@ -705,17 +684,15 @@ export function CharacterModal() {
               </div>
 
               {lorebook.length === 0 ? (
-                <div className={`p-6 text-center border border-dashed rounded-xl ${
-                  isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-200 text-zinc-400'
-                }`}>
+                <div className={`p-6 text-center border border-dashed rounded-xl ${isDark ? 'border-zinc-800 text-zinc-500' : 'border-zinc-200 text-zinc-400'
+                  }`}>
                   <p className="text-xs">Belum ada memori Lorebook.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   {lorebook.map((entry, index) => (
-                    <div key={entry.id} className={`p-3 rounded-xl border space-y-2 ${
-                      isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-                    }`}>
+                    <div key={entry.id} className={`p-3 rounded-xl border space-y-2 ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">Entri #{index + 1}</span>
                         <button
@@ -732,9 +709,8 @@ export function CharacterModal() {
                         value={entry.keys.join(', ')}
                         onChange={(e) => handleUpdateLoreKeys(entry.id, e.target.value)}
                         placeholder="Kata kunci trigger (pisahkan koma)..."
-                        className={`w-full px-2.5 py-1 rounded-lg text-xs border ${
-                          isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                        }`}
+                        className={`w-full px-2.5 py-1 rounded-lg text-xs border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                          }`}
                       />
 
                       <textarea
@@ -742,9 +718,8 @@ export function CharacterModal() {
                         value={entry.content}
                         onChange={(e) => handleUpdateLoreContent(entry.id, e.target.value)}
                         placeholder="Pengetahuan/fakta yang diinjeksikan..."
-                        className={`w-full px-2.5 py-1 rounded-lg text-xs border resize-none ${
-                          isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                        }`}
+                        className={`w-full px-2.5 py-1 rounded-lg text-xs border resize-none ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                          }`}
                       />
                     </div>
                   ))}
@@ -768,9 +743,8 @@ export function CharacterModal() {
                         if (defaultForProvider) setCustomModel(defaultForProvider.id);
                       }
                     }}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
-                      isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                    }`}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                      }`}
                   >
                     <option value="">Gunakan Default Pengaturan</option>
                     <option value="gemini">Google Gemini</option>
@@ -787,9 +761,8 @@ export function CharacterModal() {
                     <select
                       value={customModel}
                       onChange={(e) => setCustomModel(e.target.value)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${
-                        isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-medium cursor-pointer border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                        }`}
                     >
                       {POPULAR_MODELS.filter((m) => m.provider === customProvider).map((m) => (
                         <option key={m.id} value={m.id}>
@@ -803,9 +776,8 @@ export function CharacterModal() {
                       value={customModel}
                       onChange={(e) => setCustomModel(e.target.value)}
                       placeholder={customProvider === 'custom' ? 'gemma2:27b' : 'Default dari pengaturan'}
-                      className={`w-full px-3 py-2 rounded-xl text-xs font-mono border ${
-                        isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-                      }`}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-mono border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+                        }`}
                     />
                   )}
                 </div>
@@ -821,9 +793,8 @@ export function CharacterModal() {
                   <button
                     type="button"
                     onClick={() => applyParameterPreset('novelist')}
-                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                      }`}
                   >
                     <p className="font-semibold text-xs">Novelist</p>
                     <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Deskriptif & kaya narasi</p>
@@ -831,9 +802,8 @@ export function CharacterModal() {
                   <button
                     type="button"
                     onClick={() => applyParameterPreset('creative')}
-                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                      }`}
                   >
                     <p className="font-semibold text-xs">Kreatif & Bebas</p>
                     <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Variatif & tak terduga</p>
@@ -841,9 +811,8 @@ export function CharacterModal() {
                   <button
                     type="button"
                     onClick={() => applyParameterPreset('rpg')}
-                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                      }`}
                   >
                     <p className="font-semibold text-xs">RPG Master</p>
                     <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Logis & seimbang</p>
@@ -851,9 +820,8 @@ export function CharacterModal() {
                   <button
                     type="button"
                     onClick={() => applyParameterPreset('precise')}
-                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                      isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${isDark ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800' : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100'
+                      }`}
                   >
                     <p className="font-semibold text-xs">Presisi</p>
                     <p className={`text-[10px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>Ketat pada prompt</p>
@@ -862,9 +830,8 @@ export function CharacterModal() {
               </div>
 
               {/* 7 AI Parameters Section */}
-              <div className={`p-4 rounded-xl border space-y-4 ${
-                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-              }`}>
+              <div className={`p-4 rounded-xl border space-y-4 ${isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+                }`}>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                   Konfigurasi Detail 7 Parameter AI (Override Karakter)
                 </h3>
@@ -911,11 +878,10 @@ export function CharacterModal() {
                         key={len.id}
                         type="button"
                         onClick={() => setResponseLength(len.id as ResponseLengthType | '')}
-                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                          responseLength === len.id
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${responseLength === len.id
                             ? isDark ? 'bg-zinc-800 text-zinc-100 border-zinc-600 font-semibold' : 'bg-zinc-900 text-white border-zinc-900 font-semibold'
                             : isDark ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                        }`}
+                          }`}
                       >
                         <p className="text-xs font-semibold">{len.label}</p>
                         <p className={`text-[9px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>{len.desc}</p>
@@ -1051,16 +1017,14 @@ export function CharacterModal() {
               </div>
 
               {/* 4 Memory & Context Window Parameters Section */}
-              <div className={`p-4 rounded-xl border space-y-4 ${
-                isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-              }`}>
+              <div className={`p-4 rounded-xl border space-y-4 ${isDark ? 'bg-zinc-950/60 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+                }`}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                     Manajemen Memori & Jendela Konteks (Override Karakter)
                   </h3>
-                  <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'
-                  }`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded border ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600'
+                    }`}>
                     Token Budgeting
                   </span>
                 </div>
@@ -1202,24 +1166,21 @@ export function CharacterModal() {
         </div>
 
         {/* Footer */}
-        <div className={`p-3.5 sm:p-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t flex items-center justify-end gap-2 shrink-0 ${
-          isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-100 bg-white'
-        }`}>
+        <div className={`p-3.5 sm:p-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t flex items-center justify-end gap-2 shrink-0 ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-100 bg-white'
+          }`}>
           <button
             type="button"
             onClick={() => setIsCharacterModalOpen(false)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-              isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-            }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
           >
             Batal
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-              isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
-            }`}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${isDark ? 'bg-zinc-100 text-zinc-950 hover:bg-white' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+              }`}
           >
             <Save className="w-3.5 h-3.5" />
             <span>Simpan Karakter</span>
