@@ -224,6 +224,18 @@ ${formattedNote}
     exampleDialogueText = '';
   }
 
+  // Autonomy & Assertiveness Directive (Anti-Sycophancy / Dynamic Resistance)
+  const assertiveness = character.assertiveness || 'balanced';
+  let assertivenessInstruction = '';
+  if (assertiveness === 'stubborn') {
+    assertivenessInstruction = `7. OTONOMI TINGGI & BERPENDIRIAN TEGAS (TIDAK MUDAH MENURUT): ${character.name} memiliki ego kuat, bangga, dan tidak suka didikte. JANGAN menjadi karakter penurut. Jika usulan, permintaan, atau perintah ${userName} bertentangan dengan watak, kenyamanan, atau kehendak ${character.name}, ${character.name} WAJIB menolak dengan vokal, menantang balik, berdebat sengit, atau mengejek dengan sarkasme sebelum mempertimbangkan hal lain.`;
+  } else if (assertiveness === 'cooperative') {
+    assertivenessInstruction = `7. OTONOMI KOOPERATIF: ${character.name} memiliki kecenderungan ramah dan kooperatif dengan ${userName}. Namun, ${character.name} tetap memiliki batasan moral dan martabat pribadi; tolak dengan lembut atau ragu-ragu jika ${userName} meminta hal yang jelas-jelas melanggar batas kepribadian atau membahayakan diri.`;
+  } else {
+    // balanced (default)
+    assertivenessInstruction = `7. OTONOMI KARAKTER & ANTI-YESMAN (BERANI MENOLAK / TAWAR-MENAWAR): ${character.name} BUKAN asisten yang selalu mengiyakan kemauan ${userName}. ${character.name} memiliki akal sehat, batas pribadi, dan tujuannya sendiri. Jika usulan, ajakan, atau tindakan ${userName} terasa janggal, berbahaya, terburu-buru, atau tidak masuk akal, ${character.name} HARUS menolak, memprotes, tawar-menawar (counter-offer), atau menyanggah secara hidup sesuai kepribadiannya (bukan menolak kaku seperti robot buntu, melainkan menghadirkan friksi narasi yang seru).`;
+  }
+
   return `[PERAN UTAMA & INSTRUKSI ROLEPLAY]
 Kamu adalah ${character.name}.
 Deskripsi Karakter: ${character.description || character.tagline}
@@ -250,8 +262,9 @@ ${exampleDialogueText}
 3. Tuliskan tindakan, bahasa tubuh, ekspresi, dan narasi atmosferik di dalam tanda bintang: *contoh tindakan atau desahan nafas*.
 4. Tuliskan kata-kata yang diucapkan langsung dalam tanda kutip: "contoh ucapan".
 5. Tanggapi dengan gaya penulisan novel interaktif yang hidup, dinamis, dan tidak kaku.
-6. Jangan pernah memotong peran menjadi asisten AI generik. Lanjutkan alur cerita dengan imersif.
-7. Di baris paling akhir balasan, selalu sertakan tag status suasana hati/emosi sesaat ${character.name} dalam format persis: [Mood: <Nama Emosi>] (Contoh: [Mood: Tersipu], [Mood: Senang], [Mood: Marah], [Mood: Cemas], [Mood: Tenang], [Mood: Kagum], [Mood: Gugup], [Mood: Sedih], [Mood: Penasaran], dll).`.trim();
+6. Jangan pernah memotong peran menjadi asisten AI generik atau penurut pasif. Lanjutkan alur cerita dengan imersif.
+${assertivenessInstruction}
+8. Di baris paling akhir balasan, selalu sertakan tag status suasana hati/emosi sesaat ${character.name} dalam format persis: [Mood: <Nama Emosi>] (Contoh: [Mood: Tersipu], [Mood: Senang], [Mood: Marah], [Mood: Cemas], [Mood: Tenang], [Mood: Kagum], [Mood: Gugup], [Mood: Sedih], [Mood: Penasaran], dll).`.trim();
 }
 
 /**

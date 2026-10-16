@@ -18,6 +18,8 @@ export interface LoreEntry {
   enabled: boolean;
 }
 
+export type CharacterAssertiveness = 'cooperative' | 'balanced' | 'stubborn';
+
 export interface Character {
   id: string;
   name: string;
@@ -37,6 +39,7 @@ export interface Character {
   // Generation Parameters Override
   temperature?: number;
   responseLength?: ResponseLengthType;
+  assertiveness?: CharacterAssertiveness;
   maxTokens?: number;
   topP?: number;
   topA?: number;

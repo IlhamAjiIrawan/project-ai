@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { db } from '@/lib/db';
-import { Character, LoreEntry, ProviderType, ResponseLengthType } from '@/types';
+import { Character, LoreEntry, ProviderType, ResponseLengthType, CharacterAssertiveness } from '@/types';
 import {
   X,
   Bot,
@@ -61,6 +61,7 @@ export function CharacterModal() {
   const [customModel, setCustomModel] = useState('');
   const [temperature, setTemperature] = useState(0.8);
   const [responseLength, setResponseLength] = useState<ResponseLengthType | ''>('');
+  const [assertiveness, setAssertiveness] = useState<CharacterAssertiveness>('balanced');
   const [maxTokens, setMaxTokens] = useState(1000);
   const [topP, setTopP] = useState(0.95);
   const [topA, setTopA] = useState(0.0);
@@ -92,6 +93,7 @@ export function CharacterModal() {
       setCustomModel(editingCharacter.customModel || '');
       setTemperature(editingCharacter.temperature ?? 0.8);
       setResponseLength(editingCharacter.responseLength || '');
+      setAssertiveness(editingCharacter.assertiveness || 'balanced');
       setMaxTokens(editingCharacter.maxTokens ?? 1000);
       setTopP(editingCharacter.topP ?? 0.95);
       setTopA(editingCharacter.topA ?? 0.0);
@@ -117,6 +119,7 @@ export function CharacterModal() {
       setCustomModel('');
       setTemperature(0.8);
       setResponseLength('');
+      setAssertiveness('balanced');
       setMaxTokens(1000);
       setTopP(0.95);
       setTopA(0.0);
@@ -268,6 +271,7 @@ export function CharacterModal() {
       customModel: customModel.trim() || undefined,
       temperature,
       responseLength: responseLength ? (responseLength as ResponseLengthType) : undefined,
+      assertiveness,
       maxTokens,
       topP,
       topA,
@@ -608,6 +612,57 @@ export function CharacterModal() {
                   className={`w-full px-3 py-2 rounded-xl border font-mono text-xs ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
                     }`}
                 />
+              </div>
+
+              {/* Otonomi & Tingkat Ketegasan (Assertiveness / Anti-YesMan) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold flex items-center gap-1.5">
+                    <span>Otonomi & Ketegasan Karakter (Resistensi / Anti-YesMan)</span>
+                  </label>
+                  <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    Kemampuan AI menolak usulan pemain
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: 'cooperative',
+                      label: '🤝 Kooperatif',
+                      desc: 'Mudah setuju, ramah, hanya menolak jika melanggar moral inti.',
+                    },
+                    {
+                      id: 'balanced',
+                      label: '⚖️ Realistis (Default)',
+                      desc: 'Punya pendirian, tolak usulan aneh/bahaya, suka tawar-menawar.',
+                    },
+                    {
+                      id: 'stubborn',
+                      label: '🔥 Keras Kepala / Dominan',
+                      desc: 'Ego tinggi, sulit diatur, vokal, suka mendebat atau menentang.',
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setAssertiveness(option.id as CharacterAssertiveness)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        assertiveness === option.id
+                          ? isDark
+                            ? 'bg-blue-500/15 border-blue-500/60 text-blue-300 ring-1 ring-blue-500/40'
+                            : 'bg-blue-50 border-blue-400 text-blue-900 ring-1 ring-blue-400/40 font-medium'
+                          : isDark
+                          ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                          : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                      }`}
+                    >
+                      <p className="text-xs font-semibold mb-0.5">{option.label}</p>
+                      <p className={`text-[10px] leading-snug ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        {option.desc}
+                      </p>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
