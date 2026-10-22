@@ -5,7 +5,7 @@ import { Character, ChatMessage, UserPersona } from '@/types';
 import { ChatMessageItem } from './ChatMessageItem';
 import { ChatMessageFormatter } from './ChatMessageFormatter';
 import { useAppStore } from '@/lib/store';
-import { extractMoodFromText } from '@/lib/mood';
+import { extractMoodFromText, buildMoodFallbackMap } from '@/lib/mood';
 import { ArrowDown, Bot } from 'lucide-react';
 
 interface ChatMessageListProps {
@@ -52,6 +52,7 @@ export function ChatMessageList({
   };
 
   const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
+  const moodFallbackMap = buildMoodFallbackMap(messages);
 
   return (
     <div
@@ -94,6 +95,7 @@ export function ChatMessageList({
           onDelete={onDelete}
           onSwipeChange={onSwipeChange}
           isLastAssistantMessage={lastAssistantMessage?.id === msg.id}
+          fallbackMood={moodFallbackMap[msg.id] ?? null}
         />
       ))}
 

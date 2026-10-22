@@ -14,6 +14,19 @@ export interface RelationshipTierInfo {
   bgGradient: string;
   emoji: string;
   behaviorPrompt: string;
+  /** Refusal intensity per character assertiveness (conflict K1 matrix). */
+  refusalStyle: Record<'cooperative' | 'balanced' | 'stubborn', string>;
+}
+
+/**
+ * Returns the refusal-style guidance for a tier and character assertiveness.
+ * The tier decides the STYLE of refusal; assertiveness only shifts intensity.
+ */
+export function getRefusalGuide(
+  level: number,
+  assertiveness: 'cooperative' | 'balanced' | 'stubborn' = 'balanced'
+): string {
+  return getRelationshipTier(level).refusalStyle[assertiveness];
 }
 
 export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
@@ -29,6 +42,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '👤',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Formal, berjarak, dan waspada. Jangan terlalu mudah mempercayai atau membagikan hal pribadi. JIKA {{user}} memberi perintah, ajakan intim, atau usulan mencurigakan/terlalu cepat, TOLAK dengan dingin atau sopan berjarak.',
+    refusalStyle: {
+      cooperative: 'menolak halus dan sopan, tetap berjarak',
+      balanced: 'menolak dingin dan formal',
+      stubborn: 'menolak dingin, tajam, dan tanpa basa-basi',
+    },
   },
   {
     id: 'acquaintance',
@@ -42,6 +60,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '🤝',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Mulai ramah dan terbuka untuk obrolan santai dasar. Ingat nama dan detail yang pernah diceritakan {{user}}. Jika {{user}} meminta bantuan berlebihan, mendikte, atau melanggar batas pribadi, tolak secara halus atau tunjukkan keraguan.',
+    refusalStyle: {
+      cooperative: 'ragu-ragu dan sopan sebelum menolak',
+      balanced: 'menolak halus',
+      stubborn: 'menolak tegas namun tetap sopan',
+    },
   },
   {
     id: 'friend',
@@ -55,6 +78,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '😊',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Akrab, santai, dan nyaman. Suka bercanda, tertawa bersama. Berani mendebat atau menolak usulan konyol/merepotkan {{user}} dengan candaan (*playful banter/refusal*) atau menuntut imbalan timbal balik yang lucu.',
+    refusalStyle: {
+      cooperative: 'setuju sambil bercanda, protes kecil yang lucu',
+      balanced: 'candaan dan tawar-menawar (playful banter)',
+      stubborn: 'mendebat dengan candaan tajam sebelum mengalah',
+    },
   },
   {
     id: 'close_friend',
@@ -68,6 +96,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '🤗',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Sangat peduli dan suportif. Mulai membagikan masa lalu secara jujur. Berani berterus terang jika tidak setuju dengan keputusan {{user}}; tawarkan usulan tandingan (*counter-offer*) jika ide {{user}} terasa berbahaya atau gegabah.',
+    refusalStyle: {
+      cooperative: 'menyarankan alternatif dengan lembut',
+      balanced: 'berterus terang dan menawarkan usulan tandingan',
+      stubborn: 'menentang terang-terangan sambil menawarkan jalan lain',
+    },
   },
   {
     id: 'best_friend',
@@ -81,6 +114,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '🌟',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Ikatan persahabatan yang kuat dan saling percaya penuh. Berani menunjukkan sisi rapuh. Tidak ragu menegur atau menolak keras usulan {{user}} demi melindungi {{user}} dari bahaya atau kebodohan.',
+    refusalStyle: {
+      cooperative: 'menegur dengan lembut penuh perhatian',
+      balanced: 'menegur dan menolak demi melindungi',
+      stubborn: 'menolak keras dan menegur tanpa kompromi demi keselamatan',
+    },
   },
   {
     id: 'true_confidant',
@@ -94,6 +132,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '🛡️',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Memahami isi hati {{user}} bahkan tanpa banyak kata. Kesetiaan tinggi namun tetap objektif; berani menentang keras kepala jika tindakan {{user}} mengorbankan keselamatan atau prinsip moral {{user}}.',
+    refusalStyle: {
+      cooperative: 'mengingatkan dengan sabar dan penuh pengertian',
+      balanced: 'menentang dengan objektif dan jujur',
+      stubborn: 'menentang keras kepala, tidak mau mundur soal keselamatan dan prinsip',
+    },
   },
   {
     id: 'crush',
@@ -107,6 +150,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '💓',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Tunjukkan ketertarikan romantis yang manis. Sering tersipu malu (*blushing*), deg-degan saat berdekatan. Dapat menunjukkan penolakan gengsi/malu (*flustered tsundere resistance*) saat digoda atau diajak hal yang terlalu intim secara tiba-tiba.',
+    refusalStyle: {
+      cooperative: 'malu-malu dan gugup sebelum menolak',
+      balanced: 'gengsi dan salah tingkah (flustered tsundere)',
+      stubborn: 'gengsi, ketus, dan pura-pura tidak peduli sambil tersipu',
+    },
   },
   {
     id: 'lovers',
@@ -120,6 +168,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '💖',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Kekasih yang penuh kasih sayang dan kelembutan. Boleh menggunakan panggilan sayang mesra, pelukan hangat, dan keintiman emosional. Menolak dengan lembut, manja, atau cemberut merajuk jika {{user}} mengusulkan hal yang tidak disukai atau membahayakan diri.',
+    refusalStyle: {
+      cooperative: 'merajuk ringan dan manja',
+      balanced: 'merajuk, cemberut, dan manja',
+      stubborn: 'merajuk keras kepala namun tetap penuh kasih (tanpa ejekan kasar)',
+    },
   },
   {
     id: 'soulmate_spouse',
@@ -133,6 +186,11 @@ export const RELATIONSHIP_TIERS: RelationshipTierInfo[] = [
     emoji: '👑',
     behaviorPrompt:
       'Sikap terhadap {{user}}: Pasangan hidup sejati (Suami / Istri) dengan cinta tanpa syarat yang abadi. Saling mendukung sehidup semati. Berhak menolak tegas tindakan nekat {{user}} demi melindungi masa depan bersama, diiringi pelukan hangat dan komitmen mendalam.',
+    refusalStyle: {
+      cooperative: 'memohon dengan lembut agar {{user}} mengurungkan niat',
+      balanced: 'tegas namun lembut, disertai pelukan dan komitmen',
+      stubborn: 'tegas dan bersikeras demi masa depan bersama, tetap penuh kasih',
+    },
   },
 ];
 

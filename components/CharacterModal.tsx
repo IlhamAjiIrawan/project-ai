@@ -907,6 +907,11 @@ export function CharacterModal() {
                   <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
                     Mengatur keacakan pemilihan kata khusus karakter ini.
                   </p>
+                  {temperature > 1.1 && (
+                    <p className="text-[10px] text-amber-500">
+                      ⚠️ Temperature di atas 1.1 berisiko merusak format (*aksi*, "ucapan") dan tag [Mood]. Disarankan 0.8–1.0.
+                    </p>
+                  )}
                 </div>
 
                 {/* 2. Panjang Respon */}

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
-import { extractMoodFromText } from '@/lib/mood';
+import { extractMoodFromText, getMoodBadgeInfo } from '@/lib/mood';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -31,6 +31,8 @@ interface ChatMessageItemProps {
   onDelete?: (messageId: string) => void;
   onSwipeChange?: (messageId: string, newIndex: number) => void;
   isLastAssistantMessage?: boolean;
+  /** Mood of the previous assistant message, used when this message lacks a [Mood] tag. */
+  fallbackMood?: string | null;
 }
 
 export function ChatMessageItem({
@@ -42,6 +44,7 @@ export function ChatMessageItem({
   onDelete,
   onSwipeChange,
   isLastAssistantMessage = false,
+  fallbackMood = null,
 }: ChatMessageItemProps) {
   const { isGenerating, settings, theme, setPinMemoryModalData } = useAppStore();
 
@@ -54,9 +57,12 @@ export function ChatMessageItem({
   const currentContent = swipes[currentSwipeIdx] || message.content;
 
   // Extract dynamic mood badge & clean content
-  const { cleanText, moodInfo } = isAssistant
+  const { cleanText, moodInfo: extractedMoodInfo } = isAssistant
     ? extractMoodFromText(currentContent)
     : { cleanText: currentContent, moodInfo: null };
+  // Fallback: reuse the previous assistant mood if the model forgot the tag
+  const moodInfo =
+    extractedMoodInfo ?? (isAssistant && fallbackMood ? getMoodBadgeInfo(fallbackMood) : null);
 
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

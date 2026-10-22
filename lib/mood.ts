@@ -174,9 +174,32 @@ export function extractMoodFromText(rawText: string): {
     };
   }
 
+  // Conflict K5: a truncated or streaming response may end with an unclosed tag such as
+  // "[Mood: Sen". Strip it so the raw fragment never leaks into the chat bubble.
+  const partialTagRegex = /\s*\[(?:Mood|Suasana Hati|Status Emosi)[^\]]*$/i;
   return {
-    cleanText: rawText,
+    cleanText: rawText.replace(partialTagRegex, '').trimEnd(),
     mood: null,
     moodInfo: null,
   };
+}
+
+/**
+ * Returns the last mood found in assistant messages preceding each message index, keyed by message id.
+ * Used as a fallback badge when a model forgets the [Mood: ...] tag (conflict K5).
+ */
+export function buildMoodFallbackMap(
+  messages: { id: string; role: string; content: string; swipes?: string[]; currentSwipeIndex?: number }[]
+): Record<string, string | null> {
+  const result: Record<string, string | null> = {};
+  let lastMood: string | null = null;
+  for (const msg of messages) {
+    if (msg.role !== 'assistant') continue;
+    result[msg.id] = lastMood;
+    const swipes = msg.swipes || [msg.content];
+    const idx = msg.currentSwipeIndex ?? swipes.length - 1;
+    const { mood } = extractMoodFromText(swipes[idx] || msg.content);
+    if (mood) lastMood = mood;
+  }
+  return result;
 }

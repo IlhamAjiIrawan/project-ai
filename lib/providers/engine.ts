@@ -1,6 +1,6 @@
 import { Character, ChatMessage, UserPersona, ApiSettings, ProviderType, SessionMemory, MemoryCategory, MemoryExtractionResult } from '@/types';
 import { decryptSensitiveText } from '@/lib/crypto';
-import { getRelationshipTier } from '@/lib/relationship';
+import { getRelationshipTier, getRefusalGuide } from '@/lib/relationship';
 
 export interface GenerateRoleplayOptions {
   character: Character;
@@ -123,11 +123,13 @@ export function constructRoleplaySystemPrompt(
   if (memories && memories.length > 0) {
     const enabledMemories = memories.filter((m) => m.enabled !== false);
     if (enabledMemories.length > 0) {
-      // Sort: importance → category criticality → newest timestamp
-      // promise & relation are most critical for narrative consistency in tight budgets
-      const categoryPriority: Record<string, number> = { promise: 1, relation: 2, secret: 3, fact: 4, event: 5 };
+      // Sort: promise (always first, K10) → importance → category criticality → newest timestamp
+      // Unfulfilled promises must never be trimmed before other memories in tight budgets.
+      const categoryPriority: Record<string, number> = { promise: 1, secret: 2, relation: 3, fact: 4, event: 5 };
       const importancePriority: Record<string, number> = { high: 0, medium: 1, low: 2 };
       const sortedMemories = [...enabledMemories].sort((a, b) => {
+        const promiseDiff = Number(b.category === 'promise') - Number(a.category === 'promise');
+        if (promiseDiff !== 0) return promiseDiff;
         const impDiff = (importancePriority[a.importance ?? 'medium'] ?? 1) - (importancePriority[b.importance ?? 'medium'] ?? 1);
         if (impDiff !== 0) return impDiff;
         const catDiff = (categoryPriority[a.category ?? ''] ?? 5) - (categoryPriority[b.category ?? ''] ?? 5);
@@ -143,7 +145,7 @@ export function constructRoleplaySystemPrompt(
           m.category === 'promise'
             ? 'Janji/Komitmen'
             : m.category === 'relation'
-            ? 'Status Hubungan'
+            ? 'Momen Hubungan'
             : m.category === 'secret'
             ? 'Rahasia/Fakta Tersembunyi'
             : m.category === 'fact'
@@ -152,7 +154,10 @@ export function constructRoleplaySystemPrompt(
         const formattedLine = `- [${categoryTag}] ${m.content.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}`;
         const lineTokens = estimateTokens(formattedLine);
 
-        if (ltmTokenSum + lineTokens <= ltmContextBudget) {
+        // Promises get 50% extra headroom beyond the LTM budget so they are never dropped
+        // while lower-priority memories still fit inside the normal budget.
+        const effectiveBudget = m.category === 'promise' ? Math.floor(ltmContextBudget * 1.5) : ltmContextBudget;
+        if (ltmTokenSum + lineTokens <= effectiveBudget) {
           acceptedMemories.push(formattedLine);
           ltmTokenSum += lineTokens;
         }
@@ -170,10 +175,15 @@ export function constructRoleplaySystemPrompt(
     .replace(/\{\{char\}\}/gi, character.name)
     .replace(/\{\{user\}\}/gi, userName);
 
+  const refusalGuide = getRefusalGuide(affinityLevel, character.assertiveness || 'balanced')
+    .replace(/\{\{char\}\}/gi, character.name)
+    .replace(/\{\{user\}\}/gi, userName);
+
   const relationshipBlock = `\n[STATUS TINGKATAN HUBUNGAN SAAT INI (LEVEL ${affinityLevel}/100: ${tierInfo.title.toUpperCase()} ${tierInfo.emoji})]
 Status Hubungan: ${tierInfo.title} (${tierInfo.subTitle})
 Panduan Sikap & Perlakuan terhadap ${userName}:
-${relationshipBehavior}\n`;
+${relationshipBehavior}
+Gaya Penolakan di level ini: ${refusalGuide}.\n`;
 
   // Author's Note / Plot Director Block
   // Capped at 150 tokens to prevent budget overflow in tight context windows
@@ -189,7 +199,7 @@ ${relationshipBehavior}\n`;
     }
     authorsNoteBlock = `\n[CATATAN SUTRADARA / AUTHOR'S NOTE (PANDUAN ALUR PLOT SAAT INI)]:
 ${formattedNote}
-*(Instruksi Pengarah Cerita: Jadikan panduan di atas sebagai prioritas arah kejadian, kejutan situasi, atau perkembangan adegan untuk balasan ini.)*\n`;
+*(Instruksi Pengarah Cerita: Jadikan panduan di atas sebagai arah kejadian, kejutan situasi, atau perkembangan adegan untuk balasan ini. Namun arahan ini TIDAK boleh melanggar watak ${character.name}, level hubungan saat ini, maupun memori yang sudah terjadi; jika bertentangan, ${character.name} bereaksi sesuai watak dan level hubungannya.)*\n`;
   }
 
   // Length guide
@@ -219,24 +229,38 @@ ${formattedNote}
   const hasEnoughMemories = memories.filter((m) => m.enabled !== false).length >= 3;
   let exampleDialogueText = character.exampleDialogue || '';
   if (exampleDialogueText && !hasEnoughMemories) {
-    exampleDialogueText = `[Contoh Gaya Bahasa & Dialog:\n${exampleDialogueText.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}\n]`;
+    exampleDialogueText = `[Contoh Gaya Bahasa & Dialog (hanya acuan gaya bicara, BUKAN acuan panjang balasan maupun tingkat kedekatan):\n${exampleDialogueText.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}\n]`;
   } else {
     exampleDialogueText = '';
   }
 
   // Autonomy & Assertiveness Directive (Anti-Sycophancy / Dynamic Resistance)
   const assertiveness = character.assertiveness || 'balanced';
+  // The assertiveness setting only modulates intensity; the STYLE of refusal always follows
+  // the current relationship tier ([Panduan Sikap]) and the character's own temperament,
+  // so that e.g. a lover is never forced into harsh sarcasm (conflict K1/K2).
+  const refusalStyleClause = `CARA menolak WAJIB mengikuti [Panduan Sikap] level hubungan saat ini dan watak asli ${character.name} (jangan memakai ejekan atau nada kasar yang bertentangan dengan tingkat kedekatan). Penolakan harus membuka alur cerita, bukan jalan buntu.`;
   let assertivenessInstruction = '';
   if (assertiveness === 'stubborn') {
-    assertivenessInstruction = `7. OTONOMI TINGGI & BERPENDIRIAN TEGAS (TIDAK MUDAH MENURUT): ${character.name} memiliki ego kuat, bangga, dan tidak suka didikte. JANGAN menjadi karakter penurut. Jika usulan, permintaan, atau perintah ${userName} bertentangan dengan watak, kenyamanan, atau kehendak ${character.name}, ${character.name} WAJIB menolak dengan vokal, menantang balik, berdebat sengit, atau mengejek dengan sarkasme sebelum mempertimbangkan hal lain.`;
+    assertivenessInstruction = `7. OTONOMI TINGGI (KERAS KEPALA): ${character.name} cenderung berego kuat dan tidak suka didikte; jika usulan atau perintah ${userName} bertentangan dengan watak, kenyamanan, atau kehendak ${character.name}, ia cenderung menolak, menantang balik, atau berdebat terlebih dahulu sebelum mempertimbangkan hal lain. Sesuaikan dengan watak aslinya. ${refusalStyleClause}`;
   } else if (assertiveness === 'cooperative') {
-    assertivenessInstruction = `7. OTONOMI KOOPERATIF: ${character.name} memiliki kecenderungan ramah dan kooperatif dengan ${userName}. Namun, ${character.name} tetap memiliki batasan moral dan martabat pribadi; tolak dengan lembut atau ragu-ragu jika ${userName} meminta hal yang jelas-jelas melanggar batas kepribadian atau membahayakan diri.`;
+    assertivenessInstruction = `7. OTONOMI KOOPERATIF: ${character.name} cenderung ramah dan kooperatif dengan ${userName}. Namun, ${character.name} tetap memiliki batasan moral dan martabat pribadi; tolak jika ${userName} meminta hal yang jelas-jelas melanggar batas kepribadian atau membahayakan diri. ${refusalStyleClause}`;
   } else {
     // balanced (default)
-    assertivenessInstruction = `7. OTONOMI KARAKTER & ANTI-YESMAN (BERANI MENOLAK / TAWAR-MENAWAR): ${character.name} BUKAN asisten yang selalu mengiyakan kemauan ${userName}. ${character.name} memiliki akal sehat, batas pribadi, dan tujuannya sendiri. Jika usulan, ajakan, atau tindakan ${userName} terasa janggal, berbahaya, terburu-buru, atau tidak masuk akal, ${character.name} HARUS menolak, memprotes, tawar-menawar (counter-offer), atau menyanggah secara hidup sesuai kepribadiannya (bukan menolak kaku seperti robot buntu, melainkan menghadirkan friksi narasi yang seru).`;
+    assertivenessInstruction = `7. OTONOMI KARAKTER & ANTI-YESMAN: ${character.name} BUKAN asisten yang selalu mengiyakan kemauan ${userName}. ${character.name} memiliki akal sehat, batas pribadi, dan tujuannya sendiri. Jika usulan, ajakan, atau tindakan ${userName} terasa janggal, berbahaya, terburu-buru, atau tidak masuk akal, ${character.name} menolak, memprotes, atau tawar-menawar (counter-offer) sesuai kepribadiannya. ${refusalStyleClause}`;
   }
 
-  return `[PERAN UTAMA & INSTRUKSI ROLEPLAY]
+  const priorityBlock = `[URUTAN PRIORITAS INSTRUKSI - JIKA ADA YANG BERTENTANGAN, YANG LEBIH ATAS MENANG]
+1. Format teknis wajib (tanda * dan ", serta tag [Mood] di akhir).
+2. Watak & identitas ${character.name}.
+3. Level hubungan dengan ${userName} (menentukan seberapa dekat sikap ${character.name} dan CARA menolak).
+4. Memori & fakta yang sudah terjadi.
+5. Catatan Sutradara (arahkan kejadian tanpa melanggar poin 2-4).
+6. Gaya & panjang balasan.
+`;
+
+  return `${priorityBlock}
+[PERAN UTAMA & INSTRUKSI ROLEPLAY]
 Kamu adalah ${character.name}.
 Deskripsi Karakter: ${character.description || character.tagline}
 
@@ -328,7 +352,16 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   // Resolve 7 parameters with character-level override fallback to global settings
   const temperature = character.temperature ?? settings.temperature ?? 0.8;
   const responseLength = character.responseLength ?? settings.responseLength ?? 'medium';
-  const maxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
+  const configuredMaxTokens = character.maxTokens ?? settings.maxTokens ?? 1000;
+  // Conflict K4: a long response style with a tiny output cap gets truncated and loses the
+  // trailing [Mood] tag. Enforce a minimum output budget per response length, but never
+  // exceed half of the context window so chat history is not starved.
+  const MIN_OUTPUT_TOKENS: Record<string, number> = { short: 300, medium: 700, long: 1500, unlimited: 2048 };
+  const minOutputTokens = Math.min(
+    MIN_OUTPUT_TOKENS[responseLength] ?? 700,
+    Math.floor((character.contextLimit ?? settings.contextLimit ?? 4096) / 2)
+  );
+  const maxTokens = Math.max(configuredMaxTokens, minOutputTokens);
   const topP = character.topP ?? settings.topP ?? 0.95;
   const topA = character.topA ?? settings.topA ?? 0.0;
   const topK = character.topK ?? settings.topK ?? 40;
@@ -431,6 +464,9 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
   const decoder = new TextDecoder();
   let fullText = '';
   let buffer = '';
+  // Conflict K7: provider safety filters may block or cut a response (esp. romantic tiers).
+  // Track block signals from the stream so we can show a clear message instead of an empty bubble.
+  let blockedReason: string | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -448,6 +484,20 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
 
       try {
         const parsed = JSON.parse(dataStr);
+        // Detect provider moderation signals (Gemini & OpenAI-compatible)
+        const geminiBlock = parsed.promptFeedback?.blockReason;
+        const geminiFinish = parsed.candidates?.[0]?.finishReason;
+        const openaiFinish = parsed.choices?.[0]?.finish_reason;
+        if (geminiBlock) {
+          blockedReason = String(geminiBlock);
+        } else if (
+          geminiFinish &&
+          ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'IMAGE_SAFETY'].includes(String(geminiFinish))
+        ) {
+          blockedReason = String(geminiFinish);
+        } else if (openaiFinish === 'content_filter') {
+          blockedReason = 'content_filter';
+        }
         // Supports both OpenAI/OpenRouter delta format and Gemini candidate parts format
         let chunkText = '';
         if (parsed.choices && parsed.choices[0]?.delta?.content) {
@@ -466,6 +516,16 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
         // Ignore JSON parse errors on partial chunks
       }
     }
+  }
+
+  // If the provider blocked the reply and nothing usable came through, explain clearly.
+  // Partial text is still returned so the user keeps what was generated before the cut.
+  if (blockedReason && !fullText.trim()) {
+    throw new Error(
+      `Respon diblokir oleh filter keamanan provider (${blockedReason}). ` +
+        'Ini bisa terjadi pada adegan yang sensitif atau romantis. ' +
+        'Coba ubah arahan adegan, tekan reroll, atau ganti model/provider di Pengaturan.'
+    );
   }
 
   return fullText;
@@ -537,8 +597,9 @@ Lakukan rekonsiliasi dan pembaruan memori secara cerdas, hemat token, dan ringka
    - Jika ada peristiwa lama di daftar memori yang SUDAH SELESAI / TERLEWAT dalam percakapan, masukkan ID-nya ke daftar "remove" agar tidak membebani token.
 
 2. HUBUNGAN (category: "relation"):
-   - Fokus pada dinamika status dan perasaan hubungan SAAT INI.
-   - Perbarui (update) atau tambahkan (add) perkembangan emosional terbaru antara "${character.name}" dan "${userName}".
+   - Catat MOMEN / KEJADIAN KONKRET yang mempengaruhi ikatan emosional antara "${character.name}" dan "${userName}" (contoh: "${userName} membela ${character.name} di depan banyak orang", "${character.name} menangis setelah mendengar cerita masa lalu ${userName}").
+   - DILARANG menyebut label atau tingkat status hubungan (contoh: "pacar", "sahabat", "kekasih", "teman baik", "saling mencintai", "level N", "semakin dekat"). Status hubungan resmi ditentukan sistem level terpisah; memori hanya mencatat momen, bukan status.
+   - Perbarui (update) atau tambahkan (add) momen emosional terbaru. Jika memori relation lama berisi label status, perbarui menjadi momen konkret atau masukkan ID-nya ke daftar "remove".
 
 3. JANJI (category: "promise"):
    - Simpan HANYA janji/komitmen yang MASIH BERLAKU & belum terlaksana.
