@@ -12,6 +12,11 @@ export interface GenerateRoleplayOptions {
   affinityLevel?: number;
   authorsNote?: string;
   authorsNoteEnabled?: boolean;
+  sceneState?: {
+    location?: string;
+    time?: string;
+    notes?: string;
+  };
   onChunk?: (chunk: string) => void;
   signal?: AbortSignal;
 }
@@ -86,7 +91,12 @@ export function constructRoleplaySystemPrompt(
   ltmContextBudget: number = 500,
   embeddingContextBudget: number = 250,
   authorsNote?: string,
-  authorsNoteEnabled: boolean = false
+  authorsNoteEnabled: boolean = false,
+  sceneState?: {
+    location?: string;
+    time?: string;
+    notes?: string;
+  }
 ): string {
   const userName = userPersona?.name || 'User';
   const userBio = userPersona?.bio ? `[Profil Pemain/User: ${userPersona.name} - ${userPersona.bio}]` : '';
@@ -218,9 +228,21 @@ ${formattedNote}
     .replace(/\{\{char\}\}/gi, character.name)
     .replace(/\{\{user\}\}/gi, userName);
 
-  let scenarioText = character.scenario || '';
-  if (scenarioText) {
-    scenarioText = `[Skenario & Latar Tempat: ${scenarioText.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}]`;
+  let scenarioText = '';
+  const hasDynamicLocation = Boolean(sceneState?.location && sceneState.location.trim());
+  const hasDynamicTime = Boolean(sceneState?.time && sceneState.time.trim());
+
+  if (hasDynamicLocation || hasDynamicTime) {
+    const loc = sceneState?.location?.trim().replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName) || 'Lokasi Alur Terkini';
+    const time = hasDynamicTime ? sceneState?.time?.trim().replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName) : 'Sesuai perkembangan alur';
+    const notes = sceneState?.notes?.trim() ? `\nCatatan Suasana: ${sceneState.notes.trim().replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}` : '';
+
+    scenarioText = `[STATUS SKENARIO, LOKASI & WAKTU AKTIF SAAT INI (PRIORITAS TINGGI)]:
+Lokasi Saat Ini: ${loc}
+Waktu / Suasana: ${time}${notes}
+*(PERINGATAN SANGAT PENTING: Cerita dan latar tempat telah BERPINDAH dari premis pembuka awal ke lokasi dan waktu aktif di atas. ${character.name} WAJIB menarasikan latar sekitar, suasana, pencahayaan, dan interaksi objek sesuai dengan ${loc} pada waktu ${time}. DILARANG KERAS kembali menarasikan latar tempat awal (${character.scenario ? 'seperti yang ada di skenario pembuka' : 'tempat pembuka'}) kecuali jika ${userName} secara eksplisit mengajak kembali ke sana).*`;
+  } else if (character.scenario) {
+    scenarioText = `[Skenario & Latar Tempat: ${character.scenario.replace(/\{\{char\}\}/gi, character.name).replace(/\{\{user\}\}/gi, userName)}]`;
   }
 
   // Skip example dialogue when enough episodic memories exist — the model can
@@ -254,9 +276,10 @@ ${formattedNote}
 1. Format teknis wajib (tanda * dan ", serta tag [Mood] di akhir).
 2. Watak & identitas ${character.name}.
 3. Level hubungan dengan ${userName} (menentukan seberapa dekat sikap ${character.name} dan CARA menolak).
-4. Memori & fakta yang sudah terjadi.
-5. Catatan Sutradara (arahkan kejadian tanpa melanggar poin 2-4).
-6. Gaya & panjang balasan.
+4. Status lokasi & waktu aktif saat ini (wajib berlatar di lokasi terkini, bukan latar awal).
+5. Memori & fakta yang sudah terjadi.
+6. Catatan Sutradara (arahkan kejadian tanpa melanggar poin 2-5).
+7. Gaya & panjang balasan.
 `;
 
   return `${priorityBlock}
@@ -384,7 +407,8 @@ export async function generateRoleplayResponse(options: GenerateRoleplayOptions)
     ltmContextBudget,
     embeddingContextBudget,
     options.authorsNote,
-    options.authorsNoteEnabled
+    options.authorsNoteEnabled,
+    options.sceneState
   );
 
   // Calculate available history token budget from total contextLimit
@@ -611,6 +635,10 @@ Lakukan rekonsiliasi dan pembaruan memori secara cerdas, hemat token, dan ringka
 5. FAKTA (category: "fact"):
    - Fokus pada fakta terbaru. Perbarui (update) fakta yang sudah ada jika ada detail baru yang mengoreksi/melengkapi, atau tambahkan (add) fakta baru yang terungkap.
 
+6. PERPINDAHAN LOKASI & WAKTU (sceneUpdate):
+   - Deteksi apakah dalam percakapan terbaru ${character.name} dan ${userName} telah BERPINDAH lokasi atau berganti waktu/suasana (contoh: dari perpustakaan ke restoran pada malam hari, dari kafe ke taman, berpindah hari, dll).
+   - Jika terjadi perpindahan lokasi atau waktu nyata, sertakan objek "sceneUpdate". Jika TIDAK ada perpindahan tempat/waktu baru, kosongkan atau jangan sertakan.
+
 ATURAN KESELAMATAN & FORMAT:
 - DILARANG memasukkan ID memori bertanda [MANUAL - DILINDUNGI] ke daftar "remove".
 - Setiap memori harus dirangkum padat dalam 1-2 kalimat ringkas (maksimal 25 kata per item).
@@ -637,7 +665,12 @@ ATURAN KESELAMATAN & FORMAT:
       "id": "mem_yyy",
       "reason": "Janji sudah ditepati dalam percakapan"
     }
-  ]
+  ],
+  "sceneUpdate": {
+    "location": "Nama lokasi baru (contoh: Restoran Kivotos)",
+    "time": "Waktu/suasana baru (contoh: Malam hari)",
+    "notes": "Detail aktivitas/suasana singkat"
+  }
 }
 
 Pilihan category yang valid: "event" | "relation" | "fact" | "promise" | "secret".
@@ -788,7 +821,17 @@ Instruksi: Analisis data di atas dan hasilkan output JSON murni rekonsiliasi mem
         }
       }
 
-      return { add, update, remove };
+      let sceneUpdate: MemoryExtractionResult['sceneUpdate'] = undefined;
+      if (parsed.sceneUpdate && typeof parsed.sceneUpdate === 'object') {
+        const loc = typeof parsed.sceneUpdate.location === 'string' && parsed.sceneUpdate.location.trim() ? parsed.sceneUpdate.location.trim() : undefined;
+        const time = typeof parsed.sceneUpdate.time === 'string' && parsed.sceneUpdate.time.trim() ? parsed.sceneUpdate.time.trim() : undefined;
+        const notes = typeof parsed.sceneUpdate.notes === 'string' && parsed.sceneUpdate.notes.trim() ? parsed.sceneUpdate.notes.trim() : undefined;
+        if (loc || time) {
+          sceneUpdate = { location: loc, time, notes };
+        }
+      }
+
+      return { add, update, remove, sceneUpdate };
     } catch (e) {
       console.error('Error parsing memory reconciliation JSON:', e);
     }

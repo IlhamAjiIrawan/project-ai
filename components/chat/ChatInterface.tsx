@@ -185,6 +185,11 @@ export function ChatInterface() {
         affinityLevel: currentLevel,
         authorsNote: session?.authorsNote,
         authorsNoteEnabled: session?.authorsNoteEnabled,
+        sceneState: {
+          location: session?.currentLocation,
+          time: session?.currentTime,
+          notes: session?.sceneNotes,
+        },
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -286,11 +291,24 @@ export function ChatInterface() {
               }
             }
 
+            // Apply Auto Scene / Location Updates if detected
+            if (result.sceneUpdate && (result.sceneUpdate.location || result.sceneUpdate.time)) {
+              const sceneUpdateData: Partial<ChatSession> = {};
+              if (result.sceneUpdate.location) sceneUpdateData.currentLocation = result.sceneUpdate.location;
+              if (result.sceneUpdate.time) sceneUpdateData.currentTime = result.sceneUpdate.time;
+              if (result.sceneUpdate.notes) sceneUpdateData.sceneNotes = result.sceneUpdate.notes;
+              await db.chatSessions.update(selectedSessionId, sceneUpdateData);
+              changed = true;
+              const locDesc = [result.sceneUpdate.location, result.sceneUpdate.time ? `(${result.sceneUpdate.time})` : ''].filter(Boolean).join(' ');
+              setAutoMemoryToast(`📍 Latar adegan otomatis berpindah: ${locDesc}`);
+              setTimeout(() => setAutoMemoryToast(null), 4000);
+            }
+
             await db.chatSessions.update(selectedSessionId, {
               lastAutoMemoryMessageCount: totalMsgCount,
             });
 
-            if (changed) {
+            if (changed && !result.sceneUpdate) {
               setAutoMemoryToast('🧠 Memori karakter telah diperbarui otomatis di latar belakang');
               setTimeout(() => setAutoMemoryToast(null), 3500);
             }
@@ -340,6 +358,11 @@ export function ChatInterface() {
         affinityLevel: currentLevel,
         authorsNote: session?.authorsNote,
         authorsNoteEnabled: session?.authorsNoteEnabled,
+        sceneState: {
+          location: session?.currentLocation,
+          time: session?.currentTime,
+          notes: session?.sceneNotes,
+        },
         onChunk: (chunk) => {
           accumulated += chunk;
           setActiveStreamingMessage(accumulated);
@@ -449,7 +472,7 @@ export function ChatInterface() {
       />
 
       {/* Scenario Drawer */}
-      <ScenarioDrawer character={character} persona={persona} />
+      <ScenarioDrawer character={character} persona={persona} session={session} />
 
       {/* Memory Drawer */}
       <MemoryDrawer character={character} persona={persona} />

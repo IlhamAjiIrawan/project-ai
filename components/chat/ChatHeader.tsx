@@ -19,6 +19,7 @@ import {
   Brain,
   Clapperboard,
   MoreVertical,
+  MapPin,
 } from 'lucide-react';
 import { downloadJson } from '@/lib/utils';
 import { db } from '@/lib/db';
@@ -297,18 +298,31 @@ export function ChatHeader({
               </button>
             )}
 
-            {/* Toggle Scenario Drawer */}
+            {/* Toggle Scenario Drawer / Active Dynamic Location */}
             <button
               onClick={() => setIsScenarioDrawerOpen(!isScenarioDrawerOpen)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-                isScenarioDrawerOpen
-                  ? isDark ? 'bg-zinc-800 text-white border-zinc-700' : 'bg-zinc-200 text-zinc-900 border-zinc-300'
+                isScenarioDrawerOpen || session?.currentLocation
+                  ? isDark ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-700'
                   : isDark ? 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:text-zinc-900'
               }`}
-              title="Skenario & Info"
+              title={
+                session?.currentLocation
+                  ? `Lokasi Terkini: ${session.currentLocation} ${session.currentTime ? `(${session.currentTime})` : ''}`
+                  : 'Skenario & Lokasi Adegan'
+              }
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Skenario</span>
+              {session?.currentLocation ? (
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              ) : (
+                <BookOpen className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span className="hidden md:inline truncate max-w-[120px]">
+                {session?.currentLocation || 'Skenario'}
+              </span>
+              {session?.currentLocation && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              )}
             </button>
 
             {/* Export Dropdown */}
@@ -449,12 +463,17 @@ export function ChatHeader({
                       setMobileMenuOpen(false);
                       setIsScenarioDrawerOpen(!isScenarioDrawerOpen);
                     }}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-xs cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs cursor-pointer ${
                       isDark ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-zinc-100 text-zinc-700'
                     }`}
                   >
-                    <BookOpen className="w-4 h-4 text-zinc-400" />
-                    <span>Skenario & Pengetahuan</span>
+                    <div className="flex items-center gap-2">
+                      <MapPin className={`w-4 h-4 ${session?.currentLocation ? 'text-emerald-400' : 'text-zinc-400'}`} />
+                      <span>{session?.currentLocation ? `Lokasi: ${session.currentLocation}` : 'Skenario & Lokasi'}</span>
+                    </div>
+                    {session?.currentLocation && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    )}
                   </button>
 
                   <div className={`my-1 border-t ${isDark ? 'border-zinc-800' : 'border-zinc-100'}`} />

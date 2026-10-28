@@ -102,6 +102,11 @@ export interface ChatSession {
   
   // Auto Memory Consolidation Tracker
   lastAutoMemoryMessageCount?: number;
+
+  // Dynamic Scene & Location State
+  currentLocation?: string;        // e.g. "Restoran Bintang Lima"
+  currentTime?: string;            // e.g. "Malam hari (Hujan gerimis)"
+  sceneNotes?: string;             // e.g. "Duduk berdua di meja sudut dekat jendela"
 }
 
 export interface ApiSettings {
@@ -160,6 +165,12 @@ export interface SessionMemory {
   timestamp: number;
 }
 
+export interface SceneLocationUpdate {
+  location?: string;
+  time?: string;
+  notes?: string;
+}
+
 export interface MemoryExtractionResult {
   add: Array<{
     category: MemoryCategory;
@@ -176,6 +187,7 @@ export interface MemoryExtractionResult {
     id: string;
     reason?: string;
   }>;
+  sceneUpdate?: SceneLocationUpdate;
 }
 
 export interface AppBackupData {
