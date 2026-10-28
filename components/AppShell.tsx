@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { CharacterModal } from './CharacterModal';
@@ -14,9 +15,23 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const router = useRouter();
   const { setSettings, theme } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ensure default landing is always Dashboard ('/') when opening the program/browser session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasInitialLanded = sessionStorage.getItem('roleplay_initial_landed');
+      if (!hasInitialLanded) {
+        sessionStorage.setItem('roleplay_initial_landed', 'true');
+        if (window.location.pathname !== '/') {
+          router.replace('/');
+        }
+      }
+    }
+  }, [router]);
 
   useEffect(() => {
     // Open sidebar by default only on desktop
